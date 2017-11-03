@@ -1,1 +1,6 @@
 /assignment3_testfiles_full/
+CMakeCache.txt
+CMakeFiles
+Makefile
+build
+*.sh
