@@ -20,8 +20,8 @@ int main( int argc, char* argv[] )
     std::ifstream inFile( argv[1],std::ifstream::in );
     if( inFile.good() )
     {
-      int latency = std::stoi( argv[2] );
-      if( latency >= 0 )
+      double latency = std::stod( argv[2] );
+      if( latency >= 0.0 )
       {
         std::ofstream outFile( argv[3],std::ofstream::out );
         if( outFile.good() )
@@ -30,7 +30,7 @@ int main( int argc, char* argv[] )
           {
             if( verilog.process( outFile, "", vars, program ))
             {
-              DEBUGOUT( "converted %s to %s with latency %d\n",argv[1],argv[3],latency );
+              DEBUGOUT( "converted %s to %s with latency %g\n",argv[1],argv[3],latency );
             }
             else
             {
