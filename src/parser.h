@@ -30,12 +30,15 @@ public:
   bool process( std::ifstream& in, Statements& stmts );
 
 private:
-  bool processMore( std::ifstream& in, Statements& stmts, Tokenizer& tokens, Keyword::ID stopOn );
+  bool processMore( Statements& stmts, Tokenizer& tokens, Keyword::ID stopOn );
+  bool processAssignment( Statements& stmts, Tokenizer& tokens, std::string token, std::string stopOn = delimiters::none );
   IOClasses& ios;
   Variables& vars;
   Operators& ops;
   Types& types;
   Keywords& keys;
+  bool addedClkRst;
+  bool addedDummies;
 };
 
 #endif//__PARSER_H__

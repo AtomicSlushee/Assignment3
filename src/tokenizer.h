@@ -8,24 +8,30 @@ namespace delimiters
 {
   const std::string whitespace( " \t\n" );
   const std::string csv( "," + whitespace );
+  const std::string semicolon( ";" );
+  const std::string rightparen( ")" );
+  const std::string leftparen( "(" );
+  const std::string none("");
 }
 
 class Tokenizer
 {
 public:
-  Tokenizer( std::ifstream& in ) : mIn(&in), mLineNum(0)
+  Tokenizer( std::ifstream& in ) : mIn(&in), mLineNum(0), mSpecial(false)
   {
     if( !mIn->good() )
       throw;
     reload( nextLine() );
   }
 
-  Tokenizer( const std::string line = "" ) : mIn(nullptr), mLineNum(0)
+  Tokenizer( const std::string line = "" ) : mIn(nullptr), mLineNum(0), mSpecial(false)
   {
     static std::ifstream dud;
     mIn = &dud;
     reload( line );
   }
+
+  bool hitSpecial(){return mSpecial;}
 
   std::string nextLine()
   {
@@ -54,14 +60,21 @@ public:
     mPos = mLine.empty() ? std::string::npos : 0;
   }
 
-  bool next_thru( std::string& token, const std::string delims = delimiters::whitespace )
+  bool next_thru( std::string& token, const std::string delims = delimiters::whitespace, const std::string special = "" )
   {
-    return next( token, delims, true );
+    return next( token, delims, special, true );
   }
 
-  bool next( std::string& token, const std::string delims = delimiters::whitespace, bool ignoreEOL = false )
+  bool next_special( std::string& token, const std::string special, const std::string delims = delimiters::whitespace)
+  {
+    return next( token, delims, special, false );
+  }
+
+  bool next( std::string& token, const std::string delims = delimiters::whitespace, const std::string special = "", bool ignoreEOL = false )
   {
     bool succeeded = true;
+
+    mSpecial = false;
 
     // first check for anything requeued
     if( !mReQueue.empty() )
@@ -91,7 +104,7 @@ public:
     }
     else
     {
-      std::size_t last = mLine.find_first_of( delims,mPos );
+      std::size_t last = mLine.find_first_of( delims+special,mPos );
       if( last == std::string::npos )
       {
         token = mLine.substr( mPos );
@@ -101,6 +114,7 @@ public:
       {
         token = mLine.substr( mPos,last - mPos );
         mPos = mLine.find_first_not_of( delims,last );
+        mSpecial = (mLine.find_first_of(special,mPos) == mPos);
       }
     }
 
@@ -121,6 +135,7 @@ private:
   std::size_t mPos;
   int mLineNum;
   std::list<std::string> mReQueue;
+  bool mSpecial;
 };
 
 #endif//__tokenizer_h__

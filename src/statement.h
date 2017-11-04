@@ -3,6 +3,7 @@
 
 #include "assignment.h"
 #include "if.h"
+#include "for.h"
 #include "singleton.h"
 
 class Statement
@@ -10,50 +11,102 @@ class Statement
 public:
   Statement( Assignment& a )
       : stmt
-        { .pAssignment = &a }, id( ASSIGNMENT )
+        { .pAssignment = &a }, mID( ASSIGNMENT )
   {
   }
 
   Statement( IfStatement& i )
       : stmt
-        { .pIfStatement = &i }, id( IF_STATEMENT )
+        { .pIfStatement = &i }, mID( IF_STATEMENT )
   {
   }
 
+  Statement( ForLoop& f )
+      : stmt
+        { .pForLoop = &f }, mID( FOR_LOOP )
+  {
+  }
+
+  Statement( Condition& c )
+      : stmt
+        { .pCondition = &c }, mID( CONDITION )
+  {
+  }
+
+  enum ID
+  {
+    ASSIGNMENT,
+    IF_STATEMENT,
+    FOR_LOOP,
+    CONDITION
+  };
+
+  ID id(){return mID;}
+
   bool isAssignment()
   {
-    return ASSIGNMENT == id;
+    return ASSIGNMENT == mID;
   }
 
   Assignment& assignment()
   {
-    if( ASSIGNMENT != id )
+    if( ASSIGNMENT != mID )
       throw;
     return *stmt.pAssignment;
   }
 
   bool isIfStatement()
   {
-    return IF_STATEMENT == id;
+    return IF_STATEMENT == mID;
   }
 
   IfStatement& if_statement()
   {
-    if( IF_STATEMENT != id )
+    if( IF_STATEMENT != mID )
       throw;
     return *stmt.pIfStatement;
+  }
+
+  bool isForLoop()
+  {
+    return FOR_LOOP == mID;
+  }
+
+  ForLoop& for_loop()
+  {
+    if( FOR_LOOP != mID )
+      throw;
+    return *stmt.pForLoop;
+  }
+
+  bool isCondition()
+  {
+    return CONDITION == mID;
+  }
+
+  Condition& condition()
+  {
+    if( CONDITION != mID )
+      throw;
+    return *stmt.pCondition;
   }
 
   // stream override to output the assignment in Verilog
   friend std::ostream& operator<<( std::ostream& out, Statement& s )
   {
-    switch( s.id )
+    switch( s.mID )
     {
       case ASSIGNMENT:
         out << *s.stmt.pAssignment;
         break;
       case IF_STATEMENT:
         out << *s.stmt.pIfStatement;
+        break;
+      case FOR_LOOP:
+        out << *s.stmt.pForLoop;
+        break;
+      case CONDITION:
+        out << *s.stmt.pCondition;
         break;
       default:
         throw;
@@ -62,18 +115,15 @@ public:
   }
 
 private:
-  enum ID
-  {
-    ASSIGNMENT,
-    IF_STATEMENT
-  };
   union pStatement
   {
     Assignment* pAssignment;
     IfStatement* pIfStatement;
+    ForLoop* pForLoop;
+    Condition* pCondition;
   };
   pStatement stmt;
-  ID id;
+  ID mID;
 };
 
 class Statements : public std::list< Statement >
@@ -103,6 +153,24 @@ public:
     return *pI;
   }
 
+  ForLoop& addForLoop()
+  {
+    Statements* pI = new Statements;
+    Statements* pC = new Statements;
+    Statements* pU = new Statements;
+    Statements* pB = new Statements;
+    ForLoop* pF = new ForLoop(pI, pC, pU, pB);
+    addStatement( *pF );
+    return *pF;
+  }
+
+  Condition& addCondition( Variable& left, Operator& logic, Variable& right)
+  {
+    Condition* pC = new Condition( left, logic, right);
+    addStatement( *pC );
+    return *pC;
+  }
+
   Statements() : mCount( 0 )
   {
   }
@@ -118,6 +186,20 @@ private:
   Statement& addStatement( IfStatement& i )
   {
     Statement* pS = new Statement( i );
+    push_back( *pS );
+    return *pS;
+  }
+
+  Statement& addStatement( ForLoop& f )
+  {
+    Statement* pS = new Statement( f );
+    push_back( *pS );
+    return *pS;
+  }
+
+  Statement& addStatement( Condition& c )
+  {
+    Statement* pS = new Statement( c );
     push_back( *pS );
     return *pS;
   }
