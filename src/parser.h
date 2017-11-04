@@ -7,6 +7,8 @@
 #include "statement.h"
 #include "type.h"
 #include "singleton.h"
+#include "keyword.h"
+#include "tokenizer.h"
 #include <fstream>
 
 namespace builtIn
@@ -28,10 +30,12 @@ public:
   bool process( std::ifstream& in, Statements& stmts );
 
 private:
+  bool processMore( std::ifstream& in, Statements& stmts, Tokenizer& tokens, Keyword::ID stopOn );
   IOClasses& ios;
   Variables& vars;
   Operators& ops;
   Types& types;
+  Keywords& keys;
 };
 
 #endif//__PARSER_H__

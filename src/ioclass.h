@@ -10,7 +10,7 @@ class IOClass
 public:
   enum ID
   {
-    DUMMY = -1, INPUT, OUTPUT, WIRE, REGISTER
+    DUMMY = -1, INPUT, OUTPUT, WIRE, REGISTER, VARIABLE
   };
   IOClass( const std::string name_, ID id )
       : mName( name_ ), mID( id )
@@ -55,10 +55,12 @@ private:
     static IOClass t_output( "output",IOClass::OUTPUT );
     static IOClass t_wire( "wire",IOClass::WIRE );
     static IOClass t_register( "register",IOClass::REGISTER );
+    static IOClass t_variable( "variable",IOClass::VARIABLE );
     insert( pair_t( t_input.name(),t_input ) );
     insert( pair_t( t_output.name(),t_output ) );
     insert( pair_t( t_wire.name(),t_wire ) );
     insert( pair_t( t_register.name(),t_register ) );
+    insert( pair_t( t_variable.name(),t_variable ) );
   }
 };
 

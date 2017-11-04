@@ -13,8 +13,6 @@
 
 class Assignment
 {
-  friend class Assignments;
-
 public:
 
   // constructor

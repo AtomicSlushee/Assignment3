@@ -1,6 +1,6 @@
 #include "hlsyn.h"
+#include "if.h"
 #include "parser.h"
-#include "tokenizer.h"
 #include "latency.h"
 #include <cstdio>
 #include <string>
@@ -30,24 +30,28 @@ Parser::Parser()
     : ios( Singleton<IOClasses>::instance() )
     , vars( Singleton<Variables>::instance() )
     , ops( Singleton<Operators>::instance() )
-    , types (Singleton<Types>::instance() )
+    , types(Singleton<Types>::instance() )
+    , keys( Singleton<Keywords>::instance( ))
 {
 }
 
 bool Parser::process( std::ifstream& in, Statements& stmts )
 {
+  Tokenizer tokens(in);
+  return processMore( in, stmts, tokens, Keyword::NONE );
+}
+
+bool Parser::processMore( std::ifstream& in, Statements& stmts, Tokenizer& tokens, Keyword::ID stopOn )
+{
   bool addedClkRst = false;
   bool addedDummies = false;
   std::string line;
-  int lineNum = 0;
 
   // for all lines in the circuit file
-  while( std::getline( in,line ) )
+  do
   {
-    lineNum++;
-    Tokenizer tokens( line );
     std::string token;
-    while( tokens.next( token ) )
+    while( tokens.next_thru( token ) )
     {
       // skip comments explicitly
       if( (token.length() > 1) && (token[0] == '/') && (token[1] == '/') )
@@ -73,21 +77,95 @@ bool Parser::process( std::ifstream& in, Statements& stmts )
           }
           else
           {
-            fprintf( stderr,"error: invalid data type %s on line %d\n",ttoken.c_str(),lineNum );
+            fprintf( stderr,"error: invalid data type %s on line %d\n",ttoken.c_str(),tokens.lineNum() );
             return false;
           }
         }
         else
         {
-          fprintf( stderr,"error: missing data type for IO Class %s on line %d\n",token.c_str(),lineNum );
+          fprintf( stderr,"error: missing data type for IO Class %s on line %d\n",token.c_str(),tokens.lineNum() );
           return false;
         }
         tokens.kill();
       }
-      // must be a variable assignment
+      // must be a variable assignment, if, or for-loop
       else
       {
-        if( vars.isVariable( token ) )
+        Keyword::ID k = keys.isKeyword( token );
+        if (stopOn == k)
+          return true;
+        if( k != Keyword::INVALID )
+        {
+          std::string tmp;
+          std::string cond;
+          switch( k )
+          {
+            case Keyword::IF:
+              if(( tokens.next(tmp) ) &&
+                 ( keys.isKeyword(tmp) == Keyword::LEFT_PAREN ) &&
+                 ( tokens.next(cond)) &&
+                 ( tokens.next(tmp)) &&
+                 ( keys.isKeyword(tmp)==Keyword::RIGHT_PAREN) &&
+                 ( tokens.next_thru(tmp) ) &&
+                 ( keys.isKeyword(tmp)==Keyword::OPEN_BRACE) )
+              {
+                if (vars.isVariable(cond))
+                {
+                  IfStatement& if_ = stmts.addIfStatement(vars.getVariable(cond));
+                  DEBUGOUT( "begin if statement on condition %s\n",cond.c_str());
+                  if (processMore(in,if_.getIfTrue(),tokens,Keyword::CLOSE_BRACE))
+                  {
+                    bool good;
+                    if( (good=tokens.next_thru(tmp)) &&
+                        (keys.isKeyword(tmp) == Keyword::ELSE) )
+                    {
+                      DEBUGOUT( "begin else statement on condition %s\n",cond.c_str());
+                      if( (tokens.next_thru(tmp)) &&
+                          (keys.isKeyword(tmp) == Keyword::OPEN_BRACE))
+                      {
+                        if( processMore(in,if_.getIfFalse(),tokens,Keyword::CLOSE_BRACE))
+                        {
+                          DEBUGOUT( "end else statement on condition %s\n", cond.c_str());
+                        }
+                        else
+                        {
+                          fprintf(stderr, "missing closing brace on else statement for condition %s\n", cond.c_str());
+                          return false;
+                        }
+                      }
+                      else
+                      {
+                        fprintf(stderr, "missing open brace on if statement at line %d\n", tokens.lineNum());
+                        return false;
+                      }
+                    }
+                    else
+                    {
+                      if( good ) tokens.reQueue(tmp);
+                    }
+                    DEBUGOUT( "end if statement on condtion %s\n", cond.c_str());
+                  }
+                  else
+                  {
+                    fprintf(stderr, "missing closing brace on if statement for condition %s\n", cond.c_str());
+                    return false;
+                  }
+                  // TODO: recurse, need to add stop condition to get back
+                  // TODO: how to detect an error on the return? perhaps 'false' unexpected here?
+                }
+                else
+                {
+                  fprintf(stderr, "error: invalid if condition variable %s\n",cond.c_str());
+                  return false;
+                }
+              }
+              break;
+            default:
+              fprintf( stderr,"error: %s not yet implemented\n", token.c_str() );
+          }
+        }
+        // must be a variable assignment
+        else if( vars.isVariable( token ) )
         {
           Variable& result = vars.getVariable( token );
           std::string etoken;
@@ -152,7 +230,7 @@ bool Parser::process( std::ifstream& in, Statements& stmts )
                   }
                   else
                   {
-                    fprintf( stderr,"error: unknown variable %s on line %d\n",args[2].c_str(),lineNum );
+                    fprintf( stderr,"error: unknown variable %s on line %d\n",args[2].c_str(),tokens.lineNum() );
                     return false;
                   }
                 }
@@ -166,26 +244,26 @@ bool Parser::process( std::ifstream& in, Statements& stmts )
                   }
                   else
                   {
-                    fprintf( stderr,"error: malformed mux on line %d\n",lineNum );
+                    fprintf( stderr,"error: malformed mux on line %d\n",tokens.lineNum() );
                     return false;
                   }
                 }
                 else
                 {
-                  fprintf( stderr,"error: malformed assignment on line %d\n",lineNum );
+                  fprintf( stderr,"error: malformed assignment on line %d\n",tokens.lineNum() );
                   return false;
                 }
               }
               else
               {
                 fprintf( stderr,"error: argument for assignment to %s is not a variable on line %d\n",token.c_str(),
-                    lineNum );
+                    tokens.lineNum() );
                 return false;
               }
             }
             else
             {
-              fprintf( stderr,"error: assignment to %s has no arguments on line %d\n",token.c_str(),lineNum );
+              fprintf( stderr,"error: assignment to %s has no arguments on line %d\n",token.c_str(),tokens.lineNum() );
               return false;
             }
             DEBUGCOUT << std::endl;
@@ -193,18 +271,18 @@ bool Parser::process( std::ifstream& in, Statements& stmts )
           }
           else
           {
-            fprintf( stderr,"error: no assignment operator for variable %s on line %d\n",token.c_str(),lineNum );
+            fprintf( stderr,"error: no assignment operator for variable %s on line %d\n",token.c_str(),tokens.lineNum() );
             return false;
           }
         }
         else
         {
-          fprintf( stderr,"error: undefined variable %s on line %d\n",token.c_str(),lineNum );
+          fprintf( stderr,"error: undefined variable %s on line %d\n",token.c_str(),tokens.lineNum() );
           return false;
         }
       }
     }
-  }
+  } while( !tokens.isEOF() );
 
   return true;
 }
