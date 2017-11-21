@@ -1,6 +1,7 @@
 #include "hlsyn.h"
 #include "parser.h"
 #include "verilog.h"
+#include "scheduler.h"
 #include <cstdio>
 #include <string>
 
@@ -11,9 +12,11 @@ std::ostream bitBucket(0);
 int main( int argc, char* argv[] )
 {
   Parser& parser = Singleton< Parser >::instance();
+  Scheduler& scheduler = Singleton< Scheduler >::instance();
   Verilog& verilog = Singleton< Verilog >::instance();
   Variables& vars = Singleton< Variables >::instance();
   Statements program;
+  Statements schedule;
 
   if( argc > 3 )
   {
@@ -28,13 +31,20 @@ int main( int argc, char* argv[] )
         {
           if( parser.process( inFile,program ) )
           {
-            if( verilog.process( outFile, "", vars, program ))
+            if( scheduler.process( program, schedule ) )
             {
-              DEBUGOUT( "converted %s to %s with latency %g\n",argv[1],argv[3],latency );
+              if( verilog.process( outFile, "", vars, schedule ))
+              {
+                DEBUGOUT( "converted %s to %s with latency %g\n",argv[1],argv[3],latency );
+              }
+              else
+              {
+                fprintf( stderr,"error while converting to Verilog\n" );
+              }
             }
             else
             {
-              fprintf(stderr, "error while converting to Verilog\n" );
+              fprintf( stderr,"error while scheduling program\n" );
             }
           }
           else
