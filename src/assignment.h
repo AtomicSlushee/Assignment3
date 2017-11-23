@@ -181,7 +181,7 @@ private:
       if( var.isSigned() )
       {
         // sign extend
-        tmp << "{" << (width - var.width()) << "{" << var.name() << "[" << var.width() - 1 << "]" << "}," << result
+        tmp << "{{" << (width - var.width()) << "{" << var.name() << "[" << var.width() - 1 << "]" << "}}," << result
             << "}";
       }
       else
