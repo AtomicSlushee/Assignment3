@@ -12,10 +12,16 @@ class Verilog
   friend class Singleton<Verilog>;
 
 public:
-  bool process( std::ofstream& out, std::string name, Variables& vars, Statements& stmts );
+  bool ComponentDatapath( std::ofstream& out, std::string name, Variables& vars, Statements& stmts );
+  bool HLSM( std::ofstream& out, std::string name, Variables& vars, Variables& mvars, Statements& stmts );
 
 private:
   Verilog();
+  void DeclareTimescale(std::ofstream& out);
+  void DeclareModule(std::ofstream& out, std::string name, Variables& vars);
+  void DeclareVariableList(std::ofstream& out, Variables& vars);
+  void DeclareVariablesHLSM(std::ofstream& out, Variables& vars);
+  void EndModule(std::ofstream& out);
 };
 
 #endif//__verilog_h__

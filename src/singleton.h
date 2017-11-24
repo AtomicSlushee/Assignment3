@@ -5,9 +5,10 @@ template< typename T >
   class Singleton
   {
   public:
-    static T& instance()
+    template<typename... Args>
+    static T& instance(Args... args)
     {
-      static T singleton;
+      static T singleton(args...);
       return singleton;
     }
 

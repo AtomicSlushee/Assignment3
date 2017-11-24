@@ -60,11 +60,13 @@ private:
     static IOClass t_wire( "wire",IOClass::WIRE );
     static IOClass t_register( "register",IOClass::REGISTER );
     static IOClass t_variable( "variable",IOClass::VARIABLE );
+    static IOClass t_outreg( "output reg",IOClass::OUTPUT );
     insert( pair_t( t_input.name(),t_input ) );
     insert( pair_t( t_output.name(),t_output ) );
     insert( pair_t( t_wire.name(),t_wire ) );
     insert( pair_t( t_register.name(),t_register ) );
     insert( pair_t( t_variable.name(),t_variable ) );
+    insert( pair_t( t_outreg.name(),t_outreg ) );
   }
 };
 

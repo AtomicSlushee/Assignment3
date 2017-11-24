@@ -12,12 +12,18 @@
 // define the clock and reset, just in case we need them
 namespace builtIn
 {
-  Variable clock( std::string( "__clk" ),
+  Variable clock( std::string( "Clk" ),
                   Singleton<Types>::instance().getType( "UInt1" ),
                   Singleton<IOClasses>::instance().getIOClass( "input" ) );
-  Variable reset( std::string( "__rst" ),
+  Variable reset( std::string( "Rst" ),
                   Singleton<Types>::instance().getType( "UInt1" ),
                   Singleton<IOClasses>::instance().getIOClass( "input" ) );
+  Variable start( std::string( "Start" ),
+                  Singleton<Types>::instance().getType( "UInt1" ),
+                  Singleton<IOClasses>::instance().getIOClass( "input" ) );
+  Variable done(  std::string( "Done" ),
+                  Singleton<Types>::instance().getType( "UInt1" ),
+                  Singleton<IOClasses>::instance().getIOClass( "output reg" ) );
   Variable dummy1( std::string( "__na1" ),
                    Singleton<Types>::instance().getType( "UInt1" ),
                    Singleton<IOClasses>::instance().getIOClass( "wire" ) );
@@ -28,22 +34,28 @@ namespace builtIn
 
 Parser::Parser()
     : ios( Singleton<IOClasses>::instance() )
-    , vars( Singleton<Variables>::instance() )
     , ops( Singleton<Operators>::instance() )
     , types(Singleton<Types>::instance() )
     , keys( Singleton<Keywords>::instance( ))
     , addedClkRst( false )
     , addedDummies( false )
+    , addedStartDone( false )
 {
 }
 
-bool Parser::process( std::ifstream& in, Statements& stmts )
+bool Parser::process( std::ifstream& in, ModuleVariables& vars, ModelVariables& mvars, Statements& stmts, bool hlsm )
 {
   Tokenizer tokens(in);
-  return processMore( stmts, tokens, Keyword::NONE );
+  if( hlsm )
+  {
+    addClkReset(vars);
+    addStartDone(vars);
+    return processMore( mvars, stmts, tokens, Keyword::NONE );
+  }
+  return processMore( vars, stmts, tokens, Keyword::NONE );
 }
 
-bool Parser::processMore( Statements& stmts, Tokenizer& tokens, Keyword::ID stopOn )
+bool Parser::processMore( Variables& vars, Statements& stmts, Tokenizer& tokens, Keyword::ID stopOn )
 {
   std::string line;
 
@@ -130,7 +142,7 @@ bool Parser::processMore( Statements& stmts, Tokenizer& tokens, Keyword::ID stop
                 {
                   IfStatement& if_ = stmts.addIfStatement(vars.getVariable(cond));
                   DEBUGOUT( "begin if-statement on condition %s\n",cond.c_str());
-                  if (processMore(if_.getIfTrue(),tokens,Keyword::CLOSE_BRACE))
+                  if (processMore(vars, if_.getIfTrue(),tokens,Keyword::CLOSE_BRACE))
                   {
                     bool good;
                     if( (good=tokens.next_thru(tmp)) &&
@@ -140,7 +152,7 @@ bool Parser::processMore( Statements& stmts, Tokenizer& tokens, Keyword::ID stop
                       if( (tokens.next_thru(tmp)) &&
                           (keys.isKeyword(tmp) == Keyword::OPEN_BRACE))
                       {
-                        if( processMore(if_.getIfFalse(),tokens,Keyword::CLOSE_BRACE))
+                        if( processMore(vars, if_.getIfFalse(),tokens,Keyword::CLOSE_BRACE))
                         {
                           DEBUGOUT( "end else statement on condition %s\n", cond.c_str());
                         }
@@ -182,7 +194,7 @@ bool Parser::processMore( Statements& stmts, Tokenizer& tokens, Keyword::ID stop
               {
                 ForLoop& for_ = stmts.addForLoop();
                 if( tokens.next(tmp) &&
-                    processAssignment(for_.getInitial(),tokens,tmp, delimiters::semicolon))
+                    processAssignment(vars, for_.getInitial(),tokens,tmp, delimiters::semicolon))
                 {
                   DEBUGOUT( "added initial expression\n");
                   if( tokens.next(tmp) &&
@@ -205,7 +217,7 @@ bool Parser::processMore( Statements& stmts, Tokenizer& tokens, Keyword::ID stop
                             (keys.isKeyword(tmp)==Keyword::SEMICOLON))
                         {
                           if( tokens.next(tmp) &&
-                              processAssignment(for_.getUpdate(),tokens,tmp,delimiters::rightparen))
+                              processAssignment(vars, for_.getUpdate(),tokens,tmp,delimiters::rightparen))
                           {
                             DEBUGOUT( "added update expression\n");
                             if( tokens.next(tmp) && (keys.isKeyword(tmp)==Keyword::RIGHT_PAREN))
@@ -213,7 +225,7 @@ bool Parser::processMore( Statements& stmts, Tokenizer& tokens, Keyword::ID stop
                               if( tokens.next(tmp) && (keys.isKeyword(tmp)==Keyword::OPEN_BRACE))
                               {
                                 DEBUGOUT( "begin for-loop body at line %d\n", tokens.lineNum());
-                                if( processMore(for_.getBody(),tokens,Keyword::CLOSE_BRACE))
+                                if( processMore(vars, for_.getBody(),tokens,Keyword::CLOSE_BRACE))
                                 {
                                   DEBUGOUT( "end for-loop at line %d\n", tokens.lineNum());
                                 }
@@ -279,7 +291,7 @@ bool Parser::processMore( Statements& stmts, Tokenizer& tokens, Keyword::ID stop
         // must be a variable assignment
         else
         {
-          if (!processAssignment( stmts, tokens, token ))
+          if (!processAssignment( vars, stmts, tokens, token ))
             return false;
         }
       }
@@ -289,7 +301,7 @@ bool Parser::processMore( Statements& stmts, Tokenizer& tokens, Keyword::ID stop
   return true;
 }
 
-bool Parser::processAssignment( Statements& stmts, Tokenizer& tokens, std::string token, std::string stopOn )
+bool Parser::processAssignment( Variables& vars, Statements& stmts, Tokenizer& tokens, std::string token, std::string stopOn )
 {
   if( vars.isVariable( token ) )
   {
@@ -313,12 +325,7 @@ bool Parser::processAssignment( Statements& stmts, Tokenizer& tokens, std::strin
           if( args.size() == 1 )
           {
             DEBUGCOUT << "variable " << args[0] << " with REG";
-            if( !addedClkRst )
-            {
-              vars.addVariable( builtIn::clock );
-              vars.addVariable( builtIn::reset );
-              addedClkRst = true;
-            }
+            addClkReset(vars);
             stmts.addAssignment( ops.getOperatorByID( Operator::REG ),result,input1,Assignment::dummyvar(),
                 Assignment::dummyvar(),builtIn::clock,builtIn::reset );
           }
@@ -342,12 +349,7 @@ bool Parser::processAssignment( Statements& stmts, Tokenizer& tokens, std::strin
               DEBUGCOUT << args[0] << " " << op.component() << " " << args[2];
               if( (op.id() == Operator::GT) || (op.id() == Operator::LT) || (op.id() == Operator::EQ) )
               {
-                if( !addedDummies )
-                {
-                  vars.addVariable( builtIn::dummy1 );
-                  vars.addVariable( builtIn::dummy2 );
-                  addedDummies = true;
-                }
+                addDummies(vars);
                 stmts.addAssignment( op,result,input1,input2,Assignment::dummyvar(),builtIn::dummy1,
                     builtIn::dummy2 );
               }
@@ -411,4 +413,34 @@ bool Parser::processAssignment( Statements& stmts, Tokenizer& tokens, std::strin
   }
 
   return true;
+}
+
+void Parser::addClkReset(Variables& v)
+{
+  if( !addedClkRst )
+  {
+    v.addVariable( builtIn::clock );
+    v.addVariable( builtIn::reset );
+    addedClkRst = true;
+  }
+}
+
+void Parser::addDummies(Variables& v)
+{
+  if( !addedDummies )
+  {
+    v.addVariable( builtIn::dummy1 );
+    v.addVariable( builtIn::dummy2 );
+    addedDummies = true;
+  }
+}
+
+void Parser::addStartDone(Variables& v)
+{
+  if( !addedStartDone )
+  {
+    v.addVariable( builtIn::start );
+    v.addVariable( builtIn::done );
+    addedStartDone = true;
+  }
 }

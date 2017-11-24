@@ -12,10 +12,11 @@ std::ostream bitBucket(0);
 
 int main( int argc, char* argv[] )
 {
+  ModuleVariables vars;
+  ModelVariables mvars;
   Parser& parser = Singleton< Parser >::instance();
   Scheduler& scheduler = Singleton< Scheduler >::instance();
   Verilog& verilog = Singleton< Verilog >::instance();
-  Variables& vars = Singleton< Variables >::instance();
   Statements program;
   Statements schedule;
 
@@ -30,7 +31,7 @@ int main( int argc, char* argv[] )
         std::ofstream outFile( argv[3],std::ofstream::out );
         if( outFile.good() )
         {
-          if( parser.process( inFile,program ) )
+          if( parser.process( inFile,vars,mvars,program,true ) )
           {
             //##########################################################################################
             //  DEBUG AREA WHERE KEN IS PLAYING AND TRYING THINGS OUT
@@ -52,7 +53,7 @@ int main( int argc, char* argv[] )
 
             if( scheduler.process( program, schedule ) )
             {
-              if( verilog.process( outFile, "", vars, schedule ))
+              if( verilog.HLSM( outFile, "", vars, mvars, program/*schedule*/ ))
               {
                 DEBUGOUT( "converted %s to %s with latency %g\n",argv[1],argv[3],latency );
               }

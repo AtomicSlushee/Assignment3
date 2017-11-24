@@ -66,8 +66,6 @@ private:
 
 class Variables : public std::map< std::string, Variable >
 {
-  friend class Singleton<Variables>;
-
 private:
   typedef std::pair< std::string, Variable > pair_t;
 
@@ -105,10 +103,18 @@ public:
     return variable;
   }
 
-private:
+protected:
   Variables()
   {
   }
+};
+
+class ModuleVariables: public Variables
+{
+};
+
+class ModelVariables: public Variables
+{
 };
 
 #endif//__variable_h__
