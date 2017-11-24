@@ -51,6 +51,13 @@ public:
     return out;
   }
 
+  bool operator== (const Variable& a)
+  {
+    return (a.mIOClass == mIOClass) &&
+           (a.mType == mType) &&
+           (a.mName == mName);
+  }
+
 private:
   std::string mName;
   Type& mType;

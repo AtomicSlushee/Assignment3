@@ -27,6 +27,10 @@ public:
   {
     return mSigned;
   }
+  bool operator== (const Type& a)
+  {
+    return (a.mName == mName) && (a.mWidth == mWidth) && (a.mSigned == mSigned);
+  }
 private:
   std::string mName;
   int mWidth;

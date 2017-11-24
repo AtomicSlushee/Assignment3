@@ -24,6 +24,10 @@ public:
   {
     return mID;
   }
+  bool operator== (const IOClass& a)
+  {
+    return (a.mName == mName) && (a.mID == mID);
+  }
 private:
   std::string mName;
   ID mID;

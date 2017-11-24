@@ -2,6 +2,7 @@
 #include "parser.h"
 #include "verilog.h"
 #include "scheduler.h"
+#include "graphType.hpp"
 #include <cstdio>
 #include <string>
 
@@ -31,6 +32,24 @@ int main( int argc, char* argv[] )
         {
           if( parser.process( inFile,program ) )
           {
+            //##########################################################################################
+            //  DEBUG AREA WHERE KEN IS PLAYING AND TRYING THINGS OUT
+            //##########################################################################################
+            {
+              graphType g;
+              g.createWeightedGraph(program);
+              graphType::vertices_t topo;
+              g.topologicalSort(topo);
+              std::cout << std::endl << std::endl << "TOPO" << std::endl;
+              for(auto v = topo.begin(); v != topo.end(); v++)
+              {
+                std::cout << v->getNodeNumber() << ": " << v->getNode().C_format() << std::endl;
+              }
+              std::cout << std::endl << std::endl;
+              int x=4;x++;
+            }
+            //##########################################################################################
+
             if( scheduler.process( program, schedule ) )
             {
               if( verilog.process( outFile, "", vars, schedule ))

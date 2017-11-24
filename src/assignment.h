@@ -72,6 +72,22 @@ public:
     return mOperand3;
   }
 
+  // get the nth argument
+  Variable& getInput(int n)
+  {
+    switch (n)
+    {
+      case 0:
+        return mOperand1;
+      case 1:
+        return mOperand2;
+      case 2:
+        return mOperand3;
+      default:
+        throw;
+    }
+  }
+
   // get the instantiation count
   int getCount()
   {
