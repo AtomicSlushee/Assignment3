@@ -3,6 +3,7 @@
 #include "verilog.h"
 #include "scheduler.h"
 #include "graphType.hpp"
+#include "hlsm.h"
 #include <cstdio>
 #include <string>
 
@@ -15,9 +16,11 @@ int main( int argc, char* argv[] )
   ModuleVariables vars;
   ModelVariables mvars;
   Parser& parser = Singleton< Parser >::instance();
+  HLSM& hlsmTools = Singleton< HLSM >::instance();
   Scheduler& scheduler = Singleton< Scheduler >::instance();
   Verilog& verilog = Singleton< Verilog >::instance();
   Statements program;
+  Statements hlsm;
   Statements schedule;
 
   if( argc > 3 )
@@ -51,8 +54,10 @@ int main( int argc, char* argv[] )
             }
             //##########################################################################################
 
-            if( scheduler.process( program, schedule ) )
+            if( hlsmTools.CtoHLSM( program, hlsm ) )
             {
+              scheduler.process(hlsm,schedule); // TODO: scheduling, etc.
+
               if( verilog.HLSM( outFile, "", vars, mvars, program/*schedule*/ ))
               {
                 DEBUGOUT( "converted %s to %s with latency %g\n",argv[1],argv[3],latency );
@@ -64,7 +69,7 @@ int main( int argc, char* argv[] )
             }
             else
             {
-              fprintf( stderr,"error while scheduling program\n" );
+              fprintf( stderr,"error while converting program to HLSM\n" );
             }
           }
           else

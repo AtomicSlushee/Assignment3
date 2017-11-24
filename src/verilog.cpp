@@ -32,6 +32,15 @@ bool Verilog::HLSM( std::ofstream& out, std::string name, Variables& vars, Varia
 
   DeclareModule( out, "HLSM", vars);
   DeclareVariableList(out,vars);
+  DeclareVariableList(out,mvars,"Model Variables");
+
+  out << indent << "// Model Procedure" << std::endl;
+  out << indent << "always @(posedge " << builtIn::clock.name() << ") begin" << std::endl;
+
+  //TODO
+
+  out << indent << "end" << std::endl;
+
   EndModule(out);
 
   return success;
@@ -78,8 +87,14 @@ void Verilog::EndModule(std::ofstream& out)
   out << "endmodule" << std::endl;
 }
 
-void Verilog::DeclareVariableList(std::ofstream& out, Variables& vars)
+void Verilog::DeclareVariableList(std::ofstream& out, Variables& vars, std::string comment)
 {
+  // if there's a comment, use it
+  if( !comment.empty() )
+  {
+    out << indent << "// " << comment << std::endl;
+  }
+
   // output the variable declarations
   for (Variables::iterator i = vars.begin(); i != vars.end(); i++)
   {
