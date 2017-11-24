@@ -47,9 +47,10 @@ int main( int argc, char* argv[] )
               std::cout << std::endl << std::endl << "TOPO" << std::endl;
               for(auto v = topo.begin(); v != topo.end(); v++)
               {
-                std::cout << v->getNodeNumber() << ": " << v->getNode().C_format() << std::endl;
+                std::cout << v->get().getNodeNumber() << ": " << v->get().getNode().get().C_format() << std::endl;
               }
               std::cout << std::endl << std::endl;
+              std::cout << "LP: " << g.longestPath(topo, graphType::UNITY) << std::endl;
               int x=4;x++;
             }
             //##########################################################################################

@@ -6,17 +6,22 @@
 
 class graphType
 {
-private:
+public:
   enum HelperID {BLACK,GRAY,WHITE};
+  enum WeightID {UNITY=0,LATENCY,numWeights};
+private:
   struct Helper
   {
     HelperID color;
-    Helper():color(BLACK){}
+    double dist;
+    double weight[numWeights];
+    Helper():color(BLACK),dist(0.0),weight{1.0,0.0}{}
   };
 
 public:
+  typedef Vertex<Assignment,Variable,Helper>::vertref_t vertref_t;
   typedef Vertex<Assignment,Variable,Helper> vertex_t;
-  typedef std::list<vertex_t> vertices_t;
+  typedef std::list<vertref_t> vertices_t;
 
 public:
   graphType(){}
@@ -32,6 +37,7 @@ public:
       {
         Assignment& a = i->assignment();
         vertex_t& v = *(new vertex_t(a,node++));
+        v.helper.weight[LATENCY] = a.getLatency();
         graph.push_back(v);
         v.addOutput(a.getResult());
         for( int n = 0; n < a.getNumArgs(); n++ )
@@ -48,15 +54,16 @@ public:
   // create the edges in the graph, which are directional dependencies: output->input
   void createEdges()
   {
-    for( vertices_t::iterator v1 = graph.begin(); v1 != graph.end(); v1++ )
+    for( auto v1 = graph.begin(); v1 != graph.end(); v1++ )
     {
-      for( vertices_t::iterator v2 = std::next(v1); v2 != graph.end(); v2++ )
+      for( auto v2 = std::next(v1); v2 != graph.end(); v2++ )
       {
-        vertex_t::iolist_t& outs = v1->getOutputs();
-        for( vertex_t::iolist_t::iterator o = outs.begin(); o != outs.end() ; o++)
+        vertex_t::iolist_t& outs = v1->get().getOutputs();
+        for( auto o = outs.begin(); o != outs.end() ; o++)
         {
-          if( v2->findInput( *o ))
-            v1->addLink(*v2);
+          auto x = o->get();
+          if( v2->get().findInput( o->get() ))
+            v1->get().addLink(*v2);
         }
       }
     }
@@ -82,22 +89,52 @@ public:
       }
     }
     v.helper.color = BLACK;
-    l.push_back( v );
+    l.push_front( v );
   }
 
   void topologicalSort(vertices_t& l)
   {
     for( auto v = graph.begin(); v != graph.end(); v++ )
     {
-      v->helper.color = WHITE;
+      v->get().helper.color = WHITE;
     }
     for( auto v = graph.begin(); v != graph.end(); v++ )
     {
-      if( v->helper.color == WHITE )
+      if( v->get().helper.color == WHITE )
       {
         tsVisit( l, *v );
       }
     }
+  }
+
+  double longestPath(vertices_t& l, WeightID w)
+  {
+    // input is topological sort
+    for( auto u = l.begin(); u != l.end(); u++)
+    {
+      u->get().helper.dist = 0.0;
+    }
+    for( auto u = l.begin(); u != l.end(); u++)
+    {
+      vertex_t::nodelist_t& nlist = u->get().getLinks();
+      for( auto v = nlist.begin(); v != nlist.end(); v++)
+      {
+        double weight = u->get().helper.dist + v->get().helper.weight[w];
+        if( weight > v->get().helper.dist)
+        {
+          v->get().helper.dist = weight;
+        }
+      }
+    }
+    double maxW = 0.0;
+    for( auto u = l.begin(); u != l.end(); u++)
+    {
+      if( u->get().helper.dist > maxW)
+      {
+        maxW = u->get().helper.dist;
+      }
+    }
+    return maxW;
   }
 
 private:

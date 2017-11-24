@@ -20,9 +20,18 @@ public:
   {
   }
 
-  void addInput(IOTYPE& i){inList.push_back(i);}
-  void addOutput(IOTYPE& o){outList.push_back(o);}
-  iolist_t& getOutputs(){return outList;}
+    void addInput( IOTYPE& i )
+    {
+      inList.push_back( i );
+    }
+    void addOutput( IOTYPE& o )
+    {
+      outList.push_back( o );
+    }
+    iolist_t& getOutputs()
+    {
+      return outList;
+    }
   bool findInput(IOTYPE& in)
   {
     typename iolist_t::iterator i;
@@ -34,7 +43,7 @@ public:
   void addLink(vertref_t v){nodeList.push_back(v);}
   nodelist_t& getLinks(){return nodeList;}
   int getNodeNumber(){return nodeNum;}
-  NODETYPE& getNode(){return rNode;}
+  noderef_t& getNode(){return rNode;}
 
 private:
   noderef_t rNode;
