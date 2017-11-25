@@ -13,10 +13,9 @@ std::ostream bitBucket(0);
 
 int main( int argc, char* argv[] )
 {
-  ModuleVariables vars;
-  ModelVariables mvars;
+  ModuleVariables moduleVars;
+  ModelVariables modelVars;
   Parser& parser = Singleton< Parser >::instance();
-  HLSM& hlsmTools = Singleton< HLSM >::instance();
   Scheduler& scheduler = Singleton< Scheduler >::instance();
   Verilog& verilog = Singleton< Verilog >::instance();
   Statements program;
@@ -34,8 +33,9 @@ int main( int argc, char* argv[] )
         std::ofstream outFile( argv[3],std::ofstream::out );
         if( outFile.good() )
         {
-          if( parser.process( inFile,vars,mvars,program,true ) )
+          if( parser.process( inFile,moduleVars,modelVars,program,true ) )
           {
+#if 0
             //##########################################################################################
             //  DEBUG AREA WHERE KEN IS PLAYING AND TRYING THINGS OUT
             //##########################################################################################
@@ -88,15 +88,29 @@ int main( int argc, char* argv[] )
                 std::cout << "<" << myState << ">" << v->get().getNodeNumber() << "[" << v->get().helper.dist << "]{" << v->get().helper.group << "}: " << v->get().getNode().get().C_format() << std::endl;
               }
               std::cout << std::endl << std::endl;
+
+
+              // I want to be able to copy graphs, or lists of vertices at least
+              graphType g2(g);
+              graphType::vertices_t v2;
+              v2 = topo;
+              graphType g3(topo);
+              graphType g4 = g;
               int x=4;x++;
+
+              // can I find a statement in a graph???
+              for( auto s = program.begin(); s != program.end(); s++)
+              {
+                auto i = g.findStatement(*s);
+                std::string c = i->get().getNode().get().C_format();
+                int x=4;x++;
+              }
             }
             //##########################################################################################
-
-            if( hlsmTools.CtoHLSM( program, hlsm ) )
+#endif
+            if( scheduler.process( program, schedule ) )
             {
-              scheduler.process(hlsm,schedule); // TODO: scheduling, etc.
-
-              if( verilog.HLSM( outFile, "", vars, mvars, program/*schedule*/ ))
+              if( verilog.HLSM( outFile, "", moduleVars, modelVars, schedule ))
               {
                 DEBUGOUT( "converted %s to %s with latency %g\n",argv[1],argv[3],latency );
               }
@@ -107,7 +121,7 @@ int main( int argc, char* argv[] )
             }
             else
             {
-              fprintf( stderr,"error while converting program to HLSM\n" );
+              fprintf( stderr,"error while scheduling program to HLSM\n" );
             }
           }
           else

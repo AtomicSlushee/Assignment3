@@ -3,12 +3,13 @@
 
 #include "singleton.h"
 #include "statement.h"
+#include "graphType.hpp"
 
 class HLSM
 {
   friend class Singleton<HLSM>;
 public:
-  int CtoHLSM( Statements& c, Statements& hlsm );
+  int CtoHLSM( graphType& g, Statements& hlsm );
 private:
   HLSM();
 };

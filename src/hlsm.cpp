@@ -4,7 +4,7 @@ HLSM::HLSM()
 {
 }
 
-int HLSM::CtoHLSM( Statements& c, Statements& hlsm )
+int HLSM::CtoHLSM( graphType& g, Statements& hlsm )
 {
   int states = 0;
 
