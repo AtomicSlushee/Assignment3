@@ -38,7 +38,7 @@ public:
   std::string C_format()
   {
     std::string out;
-    out = "if statement is todo"; //TODO
+    out = "if ( " + mCondition.name() + " )";
     return out;
   }
 
