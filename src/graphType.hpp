@@ -26,6 +26,14 @@ public:
 public:
   graphType(){}
   ~graphType(){}
+  graphType(vertices_t& copyMe)
+  {
+    graph = copyMe;
+  }
+  graphType(graphType& copyMe)
+  {
+    graph = copyMe.getGraph();
+  }
 
   // add a vertex in our graph for every assignment found
   int createVertices(Statements& stmt)
@@ -204,6 +212,11 @@ public:
   void graphClear()
   {
     graph.clear();
+  }
+
+  vertices_t& getGraph()
+  {
+    return graph;
   }
 
 private:
