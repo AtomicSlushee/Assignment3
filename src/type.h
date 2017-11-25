@@ -58,6 +58,16 @@ public:
       throw -1;
     return i->second;
   }
+  Type& addType( bool s, int w )
+  {
+    std::string type( s ? "Int" : "UInt");
+    type += std::to_string(w);
+    types_t::iterator i = mTypes.find( type );
+    if( i != mTypes.end() )
+      return i->second;
+    mTypes.insert( pair_t( type,Type( type,w,s ) ) );
+    return getType(type);
+  }
 
 private:
   typedef std::pair< std::string, Type > pair_t;
