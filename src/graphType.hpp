@@ -19,8 +19,8 @@ private:
   };
 
 public:
-  typedef Vertex<Assignment,Variable,Helper>::vertref_t vertref_t;
-  typedef Vertex<Assignment,Variable,Helper> vertex_t;
+  typedef Vertex<Statement,Variable,Helper> vertex_t;
+  typedef vertex_t::vertref_t vertref_t;
   typedef std::list<vertref_t> vertices_t;
 
 public:
@@ -30,23 +30,54 @@ public:
   // add a vertex in our graph for every assignment found
   void createVertices(Statements& stmt)
   {
-    int node = 1;
+    int node=1;
+    createVertices(stmt,node,nullptr);
+  }
+  void createVertices(Statements& stmt, int& node, Statement* sx)
+  {
     for( Statements::iterator i = stmt.begin(); i != stmt.end(); i++)
     {
       if( i->isAssignment() )
       {
         Assignment& a = i->assignment();
-        vertex_t& v = *(new vertex_t(a,node++));
+        vertex_t& v = *(new vertex_t(*i,node++));
         v.helper.weight[LATENCY] = a.getLatency();
         graph.push_back(v);
         v.addOutput(a.getResult());
         for( int n = 0; n < a.getNumArgs(); n++ )
+        {
           v.addInput(a.getInput(n));
+        }
+        if( nullptr != sx)
+        {
+          if( sx->isIfStatement() )
+          {
+            Variable& condition = sx->if_statement().getCondition();
+            v.addInput(condition);
+          }
+        }
+      }
+      else if( i->isIfStatement() )
+      {
+        //TODO: new to handle if-statements
+        IfStatement& fi = i->if_statement();
+        vertex_t& v = *(new vertex_t(*i,node++));
+        // TODO: weight of conditional
+        graph.push_back(v);
+        Variable& condition = fi.getCondition();
+        v.addOutput(condition);
+        v.addInput(condition);
+        createVertices(fi.getIfTrue(), node, i->getStatement());
+        createVertices(fi.getIfFalse(), node, i->getStatement());
+      }
+      else if( i->isForLoop() )
+      {
+        //TODO: need to handle for-loops
+        //TODO: not yet sure about when to unroll for-loop four times for FDS
       }
       else
       {
-        //TODO: need to handle for-loops and if-statements
-        //TODO: not yet sure about when to unroll for-loop four times for FDS
+        throw; // shouldn't get here
       }
     }
   }
