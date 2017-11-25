@@ -219,6 +219,16 @@ public:
     return graph;
   }
 
+  vertices_t::iterator findStatement(Statement& stmt)
+  {
+    for( auto v = graph.begin(); v != graph.end(); v++)
+    {
+      if( *(v->get().getNode().get().getStatement()) == stmt)
+        return v;
+    }
+    return graph.end();
+  }
+
 private:
   vertices_t graph;
 };

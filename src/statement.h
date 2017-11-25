@@ -143,6 +143,11 @@ public:
     return this;
   }
 
+  bool operator==( const Statement& a)
+  {
+    return (mID == a.mID) && (stmt.p == a.stmt.p);
+  }
+
 private:
   union pStatement
   {
@@ -150,6 +155,7 @@ private:
     IfStatement* pIfStatement;
     ForLoop* pForLoop;
     Condition* pCondition;
+    void* p;
   };
 
   pStatement stmt;
