@@ -15,7 +15,8 @@ private:
     HelperID color;
     double dist;
     double weight[numWeights];
-    Helper():color(BLACK),dist(0.0),weight{1.0,0.0}{}
+    int group;
+    Helper():color(BLACK),dist(0.0),weight{1.0,0.0},group(0){}
   };
 
 public:
@@ -28,12 +29,14 @@ public:
   ~graphType(){}
 
   // add a vertex in our graph for every assignment found
-  void createVertices(Statements& stmt)
+  int createVertices(Statements& stmt)
   {
     int node=1;
-    createVertices(stmt,node,nullptr);
+    int group=1;
+    createVertices(stmt,node,group,nullptr);
+    return ++group;
   }
-  void createVertices(Statements& stmt, int& node, Statement* sx)
+  void createVertices(Statements& stmt, int& node, int& group, Statement* sx)
   {
     for( Statements::iterator i = stmt.begin(); i != stmt.end(); i++)
     {
@@ -42,6 +45,7 @@ public:
         Assignment& a = i->assignment();
         vertex_t& v = *(new vertex_t(*i,node++));
         v.helper.weight[LATENCY] = a.getLatency();
+        v.helper.group = group;
         graph.push_back(v);
         v.addOutput(a.getResult());
         for( int n = 0; n < a.getNumArgs(); n++ )
@@ -63,12 +67,15 @@ public:
         IfStatement& fi = i->if_statement();
         vertex_t& v = *(new vertex_t(*i,node++));
         // TODO: weight of conditional
+        v.helper.group = ++group;
         graph.push_back(v);
         Variable& condition = fi.getCondition();
         v.addOutput(condition);
         v.addInput(condition);
-        createVertices(fi.getIfTrue(), node, i->getStatement());
-        createVertices(fi.getIfFalse(), node, i->getStatement());
+        createVertices(fi.getIfTrue(), node, ++group, i->getStatement());
+        createVertices(fi.getIfFalse(), node, ++group, i->getStatement());
+        if( std::next(i) != stmt.end())
+          ++group;
       }
       else if( i->isForLoop() )
       {
@@ -100,12 +107,14 @@ public:
     }
   }
 
-  void createWeightedGraph(Statements& stmt)
+  int createWeightedGraph(Statements& stmt)
   {
     // first, create the vertices
-    createVertices(stmt);
+    int groups = createVertices(stmt);
     // next, create the edges
     createEdges();
+
+    return groups;
   }
 
   void tsVisit(vertices_t& l, vertex_t& v)

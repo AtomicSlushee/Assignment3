@@ -41,14 +41,51 @@ int main( int argc, char* argv[] )
             //##########################################################################################
             {
               graphType g;
-              g.createWeightedGraph(program);
+              int groups = g.createWeightedGraph(program);
               graphType::vertices_t topo;
               g.topologicalSort(topo);
-              std::cout << std::endl << std::endl << "TOPO" << std::endl;
-              std::cout << "LP: " << g.longestPath(topo, graphType::UNITY) << std::endl;
+              double lp = g.longestPath(topo, graphType::UNITY);
+
+              //gather some stats
+              struct Stats
+              {
+                int mindist;
+                int maxdist;
+                int runsum;
+              };
+              std::map<int,Stats> stats;
+              for(int g=1; g<=groups; g++)
+              {
+                stats[g].mindist = 99999; //min distance
+                stats[g].maxdist = -1;   //max distance
+              }
               for(auto v = topo.begin(); v != topo.end(); v++)
               {
-                std::cout << v->get().getNodeNumber() << "[" << v->get().helper.dist << "]: " << v->get().getNode().get().C_format() << std::endl;
+                int d = static_cast<int>(0.1 + v->get().helper.dist);
+                int g = v->get().helper.group;
+                if (d < stats[g].mindist) stats[g].mindist = d;
+                if (d > stats[g].maxdist) stats[g].maxdist = d;
+              }
+              std::cout << std::endl << "GROUP:MIN/MAX --> ";
+              for(int g=1; g<=groups; g++)
+              {
+                std::cout << " " << g << ":" << stats[g].mindist << "/" << stats[g].maxdist;
+                if( g == 1)
+                  stats[g].runsum = 0;
+                else
+                  stats[g].runsum = stats[g-1].runsum + stats[g-1].maxdist - stats[g-1].mindist;
+              }
+              std::cout << std::endl;
+
+
+              std::cout << std::endl << "TOPO" << std::endl;
+              std::cout << "LP: " << lp << std::endl;
+              for(auto v = topo.begin(); v != topo.end(); v++)
+              {
+                int g = v->get().helper.group;
+                int d = static_cast<int>(0.1 + v->get().helper.dist);
+                int myState = stats[g].runsum + d - stats[g].mindist + g;
+                std::cout << "<" << myState << ">" << v->get().getNodeNumber() << "[" << v->get().helper.dist << "]{" << v->get().helper.group << "}: " << v->get().getNode().get().C_format() << std::endl;
               }
               std::cout << std::endl << std::endl;
               int x=4;x++;
