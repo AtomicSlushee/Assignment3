@@ -21,8 +21,7 @@ private:
 
 public:
   typedef Vertex<Statement,Variable,Helper> vertex_t;
-  typedef vertex_t::vertref_t vertref_t;
-  typedef std::list<vertref_t> vertices_t;
+  typedef vertex_t::vertices_t vertices_t;
 
 public:
   graphType(){}
@@ -36,24 +35,30 @@ public:
     createVertices(stmt,node,group,nullptr);
     return ++group;
   }
+
+  // this is the recursive element that covers all statements, if branches, etc.
   void createVertices(Statements& stmt, int& node, int& group, Statement* sx)
   {
+    // loop through all the given statements
     for( Statements::iterator i = stmt.begin(); i != stmt.end(); i++)
     {
+      // if this statement is an assignment
       if( i->isAssignment() )
       {
-        Assignment& a = i->assignment();
-        vertex_t& v = *(new vertex_t(*i,node++));
-        v.helper.weight[LATENCY] = a.getLatency();
-        v.helper.group = group;
-        graph.push_back(v);
-        v.addOutput(a.getResult());
-        for( int n = 0; n < a.getNumArgs(); n++ )
+        Assignment& a = i->assignment();              // grab the assignment
+        vertex_t& v = *(new vertex_t(*i,node++));     // create a new vertex for it
+        v.helper.weight[LATENCY] = a.getLatency();    // set the weight based on latency
+        v.helper.group = group;                       // give it the current group number
+        graph.push_back(v);                           // add vertex to graph
+        v.addOutput(a.getResult());                   // add assignment output to vertex output list
+        for( int n = 0; n < a.getNumArgs(); n++ )     // add assignment inputs to vertex input list
         {
           v.addInput(a.getInput(n));
         }
         if( nullptr != sx)
         {
+          // if we have been called from within an if-statement, we need to add
+          // the condition variable to this vertex's input list
           if( sx->isIfStatement() )
           {
             Variable& condition = sx->if_statement().getCondition();
@@ -61,19 +66,22 @@ public:
           }
         }
       }
+      // if this statement is an if-statement
       else if( i->isIfStatement() )
       {
-        //TODO: new to handle if-statements
-        IfStatement& fi = i->if_statement();
-        vertex_t& v = *(new vertex_t(*i,node++));
-        // TODO: weight of conditional
-        v.helper.group = ++group;
-        graph.push_back(v);
-        Variable& condition = fi.getCondition();
-        v.addOutput(condition);
-        v.addInput(condition);
+        IfStatement& fi = i->if_statement();          // grab the if-statement
+        vertex_t& v = *(new vertex_t(*i,node++));     // create a new vertex for it
+                                                      // TODO: weight of conditional
+        v.helper.group = ++group;                     // give it the next group number (by itself)
+        graph.push_back(v);                           // add vertex to graph
+        Variable& condition = fi.getCondition();      // add the condition variable...
+        v.addOutput(condition);                       // ...as an output
+        v.addInput(condition);                        // ...and an input
+        // now, create vertices for the true branch in the next group
         createVertices(fi.getIfTrue(), node, ++group, i->getStatement());
+        // and, create vertices for the false branch in the next group
         createVertices(fi.getIfFalse(), node, ++group, i->getStatement());
+        // if we have another statement, it will be in the next group
         if( std::next(i) != stmt.end())
           ++group;
       }
@@ -92,21 +100,32 @@ public:
   // create the edges in the graph, which are directional dependencies: output->input
   void createEdges()
   {
+    // loop through all the vertices of the graph
     for( auto v1 = graph.begin(); v1 != graph.end(); v1++ )
     {
+      // compare against every other vertex in the graph
       for( auto v2 = std::next(v1); v2 != graph.end(); v2++ )
       {
+        // grab this vertex's output list
         vertex_t::iolist_t& outs = v1->get().getOutputs();
+        // check all v1 vertex outputs (usually only one) to the v2 inputs
         for( auto o = outs.begin(); o != outs.end() ; o++)
         {
           auto x = o->get();
+          // if v2 output is in v1 input list
           if( v2->get().findInput( o->get() ))
-            v1->get().addLink(*v2);
+          {
+            // add a link: v1 to v2
+            v1->get().addLinkTo(*v2);
+            // add a link v2 from v1
+            v2->get().addLinkFrom(*v1);
+          }
         }
       }
     }
   }
 
+  // create a weighted graph
   int createWeightedGraph(Statements& stmt)
   {
     // first, create the vertices
@@ -117,10 +136,11 @@ public:
     return groups;
   }
 
+  // topological sort visit activity (recursive)
   void tsVisit(vertices_t& l, vertex_t& v)
   {
     v.helper.color = GRAY;
-    vertex_t::nodelist_t& nlist = v.getLinks();
+    vertices_t& nlist = v.getLinks();
     for( auto n = nlist.begin(); n != nlist.end(); n++)
     {
       if( n->get().helper.color == WHITE )
@@ -132,6 +152,7 @@ public:
     l.push_front( v );
   }
 
+  // create a topologically sorted list per the algorithm
   void topologicalSort(vertices_t& l)
   {
     for( auto v = graph.begin(); v != graph.end(); v++ )
@@ -147,16 +168,18 @@ public:
     }
   }
 
+  // compute the longest path through the given list of vertices
+  // using the given weight ID (either unity or latency for now)
   double longestPath(vertices_t& l, WeightID w)
   {
-    // input is topological sort
+    // input is assumed to be topologically sorted
     for( auto u = l.begin(); u != l.end(); u++)
     {
       u->get().helper.dist = 0.0;
     }
     for( auto u = l.begin(); u != l.end(); u++)
     {
-      vertex_t::nodelist_t& nlist = u->get().getLinks();
+      vertices_t& nlist = u->get().getLinks();
       for( auto v = nlist.begin(); v != nlist.end(); v++)
       {
         double weight = u->get().helper.dist + v->get().helper.weight[w];
@@ -175,6 +198,12 @@ public:
       }
     }
     return maxW;
+  }
+
+  // wipe out the graph to start over
+  void graphClear()
+  {
+    graph.clear();
   }
 
 private:
