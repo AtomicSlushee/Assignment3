@@ -91,6 +91,30 @@ public:
     return *stmt.pCondition;
   }
 
+  std::string C_format()
+  {
+    std::string result;
+
+    switch( mID )
+    {
+      case ASSIGNMENT:
+        result = stmt.pAssignment->C_format();
+        break;
+      case IF_STATEMENT:
+        result = stmt.pIfStatement->C_format();
+        break;
+      case FOR_LOOP:
+        result = stmt.pForLoop->C_format();
+        break;
+      case CONDITION:
+        result = stmt.pCondition->C_format();
+        break;
+      default:
+        throw;
+    }
+    return result;
+  }
+
   // stream override to output the assignment in Verilog
   friend std::ostream& operator<<( std::ostream& out, Statement& s )
   {
@@ -114,6 +138,11 @@ public:
     return out;
   }
 
+  Statement* getStatement()
+  {
+    return this;
+  }
+
 private:
   union pStatement
   {
@@ -122,6 +151,7 @@ private:
     ForLoop* pForLoop;
     Condition* pCondition;
   };
+
   pStatement stmt;
   ID mID;
 };
