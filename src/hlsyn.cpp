@@ -35,7 +35,7 @@ int main( int argc, char* argv[] )
         {
           if( parser.process( inFile,moduleVars,modelVars,program,true ) )
           {
-#if 0
+#if 1
             //##########################################################################################
             //  DEBUG AREA WHERE KEN IS PLAYING AND TRYING THINGS OUT
             //##########################################################################################
@@ -45,6 +45,8 @@ int main( int argc, char* argv[] )
               graphType::vertices_t topo;
               g.topologicalSort(topo);
               double lp = g.longestPath(topo, graphType::UNITY);
+              // let's try a scheduling algorithm
+              scheduler.ASAP(g);
 
               //gather some stats
               struct Stats
@@ -62,11 +64,11 @@ int main( int argc, char* argv[] )
               for(auto v = topo.begin(); v != topo.end(); v++)
               {
                 int d = static_cast<int>(0.1 + v->get().helper.dist);
-                int g = v->get().helper.group;
+                int g = v->get().helper.partition;
                 if (d < stats[g].mindist) stats[g].mindist = d;
                 if (d > stats[g].maxdist) stats[g].maxdist = d;
               }
-              std::cout << std::endl << "GROUP:MIN/MAX --> ";
+              std::cout << std::endl << "PARTITION:MIN/MAX --> ";
               for(int g=1; g<=groups; g++)
               {
                 std::cout << " " << g << ":" << stats[g].mindist << "/" << stats[g].maxdist;
@@ -82,10 +84,10 @@ int main( int argc, char* argv[] )
               std::cout << "LP: " << lp << std::endl;
               for(auto v = topo.begin(); v != topo.end(); v++)
               {
-                int g = v->get().helper.group;
+                int g = v->get().helper.partition;
                 int d = static_cast<int>(0.1 + v->get().helper.dist);
                 int myState = stats[g].runsum + d - stats[g].mindist + g;
-                std::cout << "<" << myState << ">" << v->get().getNodeNumber() << "[" << v->get().helper.dist << "]{" << v->get().helper.group << "}: " << v->get().getNode().get().C_format() << std::endl;
+                std::cout << "<" << myState << ">" << v->get().getNodeNumber() << "[" << v->get().helper.dist << "]{" << v->get().helper.partition << "}(" << v->get().helper.asapTime << "): " << v->get().getNode().get().C_format() << std::endl;
               }
               std::cout << std::endl << std::endl;
 
@@ -96,7 +98,6 @@ int main( int argc, char* argv[] )
               v2 = topo;
               graphType g3(topo);
               graphType g4 = g;
-              int x=4;x++;
 
               // can I find a statement in a graph???
               for( auto s = program.begin(); s != program.end(); s++)
@@ -105,6 +106,8 @@ int main( int argc, char* argv[] )
                 std::string c = i->get().getNode().get().C_format();
                 int x=4;x++;
               }
+
+              int x=4;x++;
             }
             //##########################################################################################
 #endif

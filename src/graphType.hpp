@@ -15,8 +15,9 @@ private:
     HelperID color;
     double dist;
     double weight[numWeights];
-    int group;
-    Helper():color(BLACK),dist(0.0),weight{1.0,0.0},group(0){}
+    int partition;
+    int asapTime;
+    Helper():color(BLACK),dist(0.0),weight{1.0,0.0},partition(0),asapTime(0){}
   };
 
 public:
@@ -39,13 +40,13 @@ public:
   int createVertices(Statements& stmt)
   {
     int node=1;
-    int group=1;
-    createVertices(stmt,node,group,nullptr);
-    return ++group;
+    int partition=1;
+    createVertices(stmt,node,partition,nullptr);
+    return ++partition;
   }
 
   // this is the recursive element that covers all statements, if branches, etc.
-  void createVertices(Statements& stmt, int& node, int& group, Statement* sx)
+  void createVertices(Statements& stmt, int& node, int& partition, Statement* sx)
   {
     // loop through all the given statements
     for( Statements::iterator i = stmt.begin(); i != stmt.end(); i++)
@@ -56,7 +57,7 @@ public:
         Assignment& a = i->assignment();              // grab the assignment
         vertex_t& v = *(new vertex_t(*i,node++));     // create a new vertex for it
         v.helper.weight[LATENCY] = a.getLatency();    // set the weight based on latency
-        v.helper.group = group;                       // give it the current group number
+        v.helper.partition = partition;               // give it the current partition number
         graph.push_back(v);                           // add vertex to graph
         v.addOutput(a.getResult());                   // add assignment output to vertex output list
         for( int n = 0; n < a.getNumArgs(); n++ )     // add assignment inputs to vertex input list
@@ -80,18 +81,18 @@ public:
         IfStatement& fi = i->if_statement();          // grab the if-statement
         vertex_t& v = *(new vertex_t(*i,node++));     // create a new vertex for it
                                                       // TODO: weight of conditional
-        v.helper.group = ++group;                     // give it the next group number (by itself)
+        v.helper.partition = ++partition;             // give it the next partition number (by itself)
         graph.push_back(v);                           // add vertex to graph
         Variable& condition = fi.getCondition();      // add the condition variable...
         v.addOutput(condition);                       // ...as an output
         v.addInput(condition);                        // ...and an input
-        // now, create vertices for the true branch in the next group
-        createVertices(fi.getIfTrue(), node, ++group, i->getStatement());
-        // and, create vertices for the false branch in the next group
-        createVertices(fi.getIfFalse(), node, ++group, i->getStatement());
-        // if we have another statement, it will be in the next group
+        // now, create vertices for the true branch in the next partition
+        createVertices(fi.getIfTrue(), node, ++partition, i->getStatement());
+        // and, create vertices for the false branch in the next partition
+        createVertices(fi.getIfFalse(), node, ++partition, i->getStatement());
+        // if we have another statement, it will be in the next partition
         if( std::next(i) != stmt.end())
-          ++group;
+          ++partition;
       }
       else if( i->isForLoop() )
       {
@@ -148,7 +149,7 @@ public:
   void tsVisit(vertices_t& l, vertex_t& v)
   {
     v.helper.color = GRAY;
-    vertices_t& nlist = v.getLinks();
+    vertices_t& nlist = v.getLinksTo();
     for( auto n = nlist.begin(); n != nlist.end(); n++)
     {
       if( n->get().helper.color == WHITE )
@@ -187,7 +188,7 @@ public:
     }
     for( auto u = l.begin(); u != l.end(); u++)
     {
-      vertices_t& nlist = u->get().getLinks();
+      vertices_t& nlist = u->get().getLinksTo();
       for( auto v = nlist.begin(); v != nlist.end(); v++)
       {
         double weight = u->get().helper.dist + v->get().helper.weight[w];

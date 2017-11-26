@@ -58,9 +58,14 @@ template< class NODETYPE, class IOTYPE, class HELPER >
       linkFrom.push_back( v );
     }
 
-    vertices_t& getLinks()
+    vertices_t& getLinksTo()
     {
       return linkTo;
+    }
+
+    vertices_t& getLinksFrom()
+    {
+      return linkFrom;
     }
 
     int getNodeNumber()

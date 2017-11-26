@@ -18,6 +18,7 @@ public:
   void ASAP(graphType& g);
   void ALAP(graphType& g);
   void FDS(graphType& g);
+  int ScheduleLatency(Statement& stmt);
 
 private:
   HLSM& hlsmTools;
