@@ -8,7 +8,7 @@ class graphType
 {
 public:
   enum HelperID {BLACK,GRAY,WHITE};
-  enum WeightID {UNITY=0,LATENCY,numWeights};
+  enum WeightID {UNITY=0,LATENCY,SCHEDULING,numWeights};
 private:
   struct Helper
   {
@@ -57,6 +57,7 @@ public:
         Assignment& a = i->assignment();              // grab the assignment
         vertex_t& v = *(new vertex_t(*i,node++));     // create a new vertex for it
         v.helper.weight[LATENCY] = a.getLatency();    // set the weight based on latency
+        v.helper.weight[SCHEDULING] = i->scheduleLatency();
         v.helper.partition = partition;               // give it the current partition number
         graph.push_back(v);                           // add vertex to graph
         v.addOutput(a.getResult());                   // add assignment output to vertex output list

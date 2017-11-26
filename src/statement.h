@@ -148,6 +148,33 @@ public:
     return (mID == a.mID) && (stmt.p == a.stmt.p);
   }
 
+  int scheduleLatency()
+  {
+    int latency = 0;
+
+    if( isAssignment() )
+    {
+      switch( assignment().getOperator().id() )
+      {
+        case Operator::MUL:
+          latency = 2;
+          break;
+        case Operator::DIV:
+        case Operator::MOD:
+          latency = 3;
+          break;
+        default:
+          latency = 1;
+      }
+    }
+    else if( isIfStatement() )
+    {
+      latency = 1;
+    }
+
+    return latency;
+  }
+
 private:
   union pStatement
   {

@@ -13,7 +13,7 @@ bool Scheduler::process(Statements& input, Statements& output)
 
   g.createWeightedGraph( input );
   g.topologicalSort(topo);
-  double lp = g.longestPath(topo, graphType::UNITY);
+  double lp = g.longestPath(topo, graphType::SCHEDULING);
 
   hlsmTools.CtoHLSM( g, output );
 
@@ -55,7 +55,7 @@ void Scheduler::ASAP(graphType& g)
         for( auto p = v->get().getLinksFrom().begin(); p != v->get().getLinksFrom().end(); p++)
         {
           // grab the latency of the previous statement operation
-          int latency = ScheduleLatency(*(p->get().getNode().get().getStatement()));
+          int latency = p->get().getNode().get().getStatement()->scheduleLatency();
           // see if the predecessor has been scheduled
           if( p->get().helper.asapTime == 0 )
           {
@@ -91,31 +91,4 @@ void Scheduler::ALAP(graphType& g)
 
 void Scheduler::FDS(graphType& g)
 {
-}
-
-int Scheduler::ScheduleLatency( Statement& stmt )
-{
-  int latency = 0;
-
-  if( stmt.isAssignment() )
-  {
-    switch( stmt.assignment().getOperator().id() )
-    {
-      case Operator::MUL:
-        latency = 2;
-        break;
-      case Operator::DIV:
-      case Operator::MOD:
-        latency = 3;
-        break;
-      default:
-        latency = 1;
-    }
-  }
-  else if( stmt.isIfStatement() )
-  {
-    latency = 1;
-  }
-
-  return latency;
 }
