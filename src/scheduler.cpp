@@ -1,6 +1,7 @@
 #include "scheduler.h"
 #include "graphType.hpp"
 #include "operator.h"
+#include "vertex.hpp"
 
 Scheduler::Scheduler():hlsmTools(Singleton< HLSM >::instance())
 {
@@ -14,6 +15,8 @@ bool Scheduler::process(Statements& input, Statements& output)
   g.createWeightedGraph( input );
   g.topologicalSort(topo);
   double lp = g.longestPath(topo, graphType::SCHEDULING);
+  ASAP(g);
+  dumpScheduledGraph( g, graphType::ASAP);
 
   hlsmTools.CtoHLSM( g, output );
 
@@ -25,7 +28,7 @@ void Scheduler::ASAP(graphType& g)
   // reset all asap times to zero
   for( auto v = g.getGraph().begin(); v != g.getGraph().end(); v++)
   {
-    v->get().helper.asapTime = NOT_SCHEDULED;
+    v->get().helper.schedTime[graphType::ASAP] = NOT_SCHEDULED;
   }
 
   // keep cycling until all nodes scheduled
@@ -35,14 +38,14 @@ void Scheduler::ASAP(graphType& g)
     for( auto v = g.getGraph().begin(); v != g.getGraph().end(); v++)
     {
       // if this node has already been scheduled, skip it
-      if( v->get().helper.asapTime > NOT_SCHEDULED ) continue;
+      if( v->get().helper.schedTime[graphType::ASAP] > NOT_SCHEDULED ) continue;
 
       done = false; // nope, still scheduling
 
       // does this node have any predecessors at all?
       if( v->get().getLinksFrom().empty() )
       {
-        v->get().helper.asapTime = 1; // no, schedule in the first round
+        v->get().helper.schedTime[graphType::ASAP] = 1; // no, schedule in the first round
       }
 
       else
@@ -57,7 +60,7 @@ void Scheduler::ASAP(graphType& g)
           // grab the latency of the previous statement operation
           int latency = p->get().getNode().get().getStatement()->scheduleLatency();
           // see if the predecessor has been scheduled
-          if( p->get().helper.asapTime <= NOT_SCHEDULED )
+          if( p->get().helper.schedTime[graphType::ASAP] <= NOT_SCHEDULED )
           {
             // nope, can't schedule this vertex
             allClear = false;
@@ -66,7 +69,7 @@ void Scheduler::ASAP(graphType& g)
           else
           {
             // compute this node's start time based on predecessor schedule and latency
-            int nextStart = p->get().helper.asapTime + latency;
+            int nextStart = p->get().helper.schedTime[graphType::ASAP] + latency;
             if( nextStart > maxStart )
             {
               maxStart = nextStart; // save the max
@@ -77,7 +80,7 @@ void Scheduler::ASAP(graphType& g)
         if( allClear )
         {
           // yes, schedule this node
-          v->get().helper.asapTime = maxStart;
+          v->get().helper.schedTime[graphType::ASAP] = maxStart;
         }
       }
     }
@@ -91,4 +94,32 @@ void Scheduler::ALAP(graphType& g)
 
 void Scheduler::FDS(graphType& g)
 {
+}
+
+void Scheduler::buildPartTimeMap(partitionMap_t& m, graphType& g, graphType::ScheduleID s)
+{
+  for( auto v = g.getGraph().begin(); v != g.getGraph().end(); v++)
+  {
+    int part = v->get().helper.partition;
+    int stime = v->get().helper.schedTime[s];
+    m[part][stime].push_back( v->get().getVertex() );
+  }
+}
+
+void Scheduler::dumpScheduledGraph(graphType& g, graphType::ScheduleID s)
+{
+  std::cout << std::endl << "[partition][time] C_code" << std::endl;
+  partitionMap_t m;
+  buildPartTimeMap(m,g,s);
+  for( auto i = m.begin(); i != m.end(); i++)
+  {
+    for( auto j = i->second.begin(); j != i->second.end(); j++)
+    {
+      for( vertList_t::iterator k = j->second.begin(); k != j->second.end(); k++ )
+      {
+        graphType::vertex_t* p = *k;
+        std::cout << "[" << i->first << "][" << j->first << "] " << p->getNode().get().C_format() << std::endl;
+      }
+    }
+  }
 }

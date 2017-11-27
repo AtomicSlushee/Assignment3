@@ -87,7 +87,7 @@ int main( int argc, char* argv[] )
                 int g = v->get().helper.partition;
                 int d = static_cast<int>(0.1 + v->get().helper.dist);
                 int myState = stats[g].runsum + d - stats[g].mindist + g;
-                std::cout << "<" << myState << ">" << v->get().getNodeNumber() << "[" << v->get().helper.dist << "]{" << v->get().helper.partition << "}(" << v->get().helper.asapTime << "): " << v->get().getNode().get().C_format() << std::endl;
+                std::cout << "<" << myState << ">" << v->get().getNodeNumber() << "[" << v->get().helper.dist << "]{" << v->get().helper.partition << "}(" << v->get().helper.schedTime[graphType::ASAP] << "): " << v->get().getNode().get().C_format() << std::endl;
               }
               std::cout << std::endl << std::endl;
 

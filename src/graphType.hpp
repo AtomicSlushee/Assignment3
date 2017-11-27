@@ -4,12 +4,14 @@
 #include "statement.h"
 #include "vertex.hpp"
 #include <new>
+#include <functional>
 
 class graphType
 {
 public:
   enum HelperID {BLACK,GRAY,WHITE};
   enum WeightID {UNITY=0,LATENCY,SCHEDULING,numWeights};
+  enum ScheduleID {ASAP=0,ALAP,FDS,numSchedules};
 private:
   struct Helper
   {
@@ -17,12 +19,13 @@ private:
     double dist;
     double weight[numWeights];
     int partition;
-    int asapTime;
-    Helper():color(BLACK),dist(0.0),weight{1.0,0.0},partition(0),asapTime(0){}
+    int schedTime[numSchedules];
+    Helper():color(BLACK),dist(0.0),weight{1.0,0.0},partition(0),schedTime(){}
   };
 
 public:
   typedef Vertex<Statement,Variable,Helper> vertex_t;
+  typedef std::reference_wrapper< vertex_t > vertref_t;
   typedef vertex_t::vertices_t vertices_t;
 
 public:
@@ -46,6 +49,7 @@ public:
     vertex_t* topNOP = new vertex_t(*(new Statement()), 0);
     vertex_t* endNOP = new vertex_t(*(new Statement()) ,0);
     createVertices(stmt,node,partition,topNOP,endNOP);
+    endNOP->helper.partition = partition;
     graph.push_back(*endNOP);
     return partition;
   }
@@ -53,6 +57,8 @@ public:
   // this is the recursive element that covers all statements, if branches, etc.
   void createVertices(Statements& stmt, int& node, int& partition, vertex_t* from, vertex_t*& to)
   {
+    bool firstStatement = true;
+
     // loop through all the given statements
     for( Statements::iterator i = stmt.begin(); i != stmt.end(); i++)
     {
@@ -89,7 +95,10 @@ public:
         to = new vertex_t(*(new Statement()), 0);     // create the new pseudo-endif to get back
 
                                                       // TODO: weight of conditional, if any
-        v->helper.partition = ++partition;            // give it the next partition number (by itself)
+        if( firstStatement)
+          v->helper.partition = partition;            // partition number previously incremented to get here
+        else
+          v->helper.partition = ++partition;          // give it the next partition number (by itself)
         graph.push_back(*v);                          // add vertex to graph
         Variable& condition = fi.getCondition();      // add the condition variable...
         v->addOutput(condition);                      // ...as an output
@@ -105,6 +114,7 @@ public:
           // if there is also a false branch
           if( !fi.getIfFalse().empty() )
           {
+            to->helper.partition = partition;
             graph.push_back(*to); // save the 'to' node in the graph
             from = to; // need to move 'to' to 'from' and create a new 'to' the keep the chain going
             to = new vertex_t(*(new Statement()), 0);     // create the new end target for either the next partition or caller
@@ -112,6 +122,8 @@ public:
           // if not a false, are there more statements to come?
           else if( std::next(i) != stmt.end() )
           {
+            to->helper.partition = partition;
+            graph.push_back(*to); // save the 'to' node in the graph
             from = to; // 'to' needs to become the new 'from', and a new 'to' created
             to = new vertex_t(*(new Statement()), 0);     // create the new end target for either the next partition or caller
             ++partition;
@@ -126,6 +138,8 @@ public:
           // are there more statements to come?
           if( std::next(i) != stmt.end() )
           {
+            to->helper.partition = partition;
+            graph.push_back(*to); // save the 'to' node in the graph
             from = to; // 'to' needs to become the new 'from', and a new 'to' created
             to = new vertex_t(*(new Statement()), 0);     // create the new end target for either the next partition or caller
             ++partition;
@@ -140,6 +154,7 @@ public:
       {
         throw; // shouldn't get here
       }
+      firstStatement = false;
     }
   }
 

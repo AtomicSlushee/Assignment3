@@ -78,6 +78,11 @@ template< class NODETYPE, class IOTYPE, class HELPER >
       return rNode;
     }
 
+    Vertex* getVertex()
+    {
+      return this;
+    }
+
   private:
     noderef_t rNode;
     int nodeNum;
