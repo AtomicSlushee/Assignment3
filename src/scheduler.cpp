@@ -25,7 +25,7 @@ void Scheduler::ASAP(graphType& g)
   // reset all asap times to zero
   for( auto v = g.getGraph().begin(); v != g.getGraph().end(); v++)
   {
-    v->get().helper.asapTime = 0;
+    v->get().helper.asapTime = NOT_SCHEDULED;
   }
 
   // keep cycling until all nodes scheduled
@@ -35,7 +35,7 @@ void Scheduler::ASAP(graphType& g)
     for( auto v = g.getGraph().begin(); v != g.getGraph().end(); v++)
     {
       // if this node has already been scheduled, skip it
-      if( v->get().helper.asapTime ) continue;
+      if( v->get().helper.asapTime > NOT_SCHEDULED ) continue;
 
       done = false; // nope, still scheduling
 
@@ -57,7 +57,7 @@ void Scheduler::ASAP(graphType& g)
           // grab the latency of the previous statement operation
           int latency = p->get().getNode().get().getStatement()->scheduleLatency();
           // see if the predecessor has been scheduled
-          if( p->get().helper.asapTime == 0 )
+          if( p->get().helper.asapTime <= NOT_SCHEDULED )
           {
             // nope, can't schedule this vertex
             allClear = false;

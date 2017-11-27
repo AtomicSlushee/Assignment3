@@ -3,6 +3,7 @@
 
 #include "statement.h"
 #include "vertex.hpp"
+#include <new>
 
 class graphType
 {
@@ -41,12 +42,16 @@ public:
   {
     int node=1;
     int partition=1;
-    createVertices(stmt,node,partition,nullptr);
-    return ++partition;
+    // create a top and bottom NOP to hook everything up in between
+    vertex_t* topNOP = new vertex_t(*(new Statement()), 0);
+    vertex_t* endNOP = new vertex_t(*(new Statement()) ,0);
+    createVertices(stmt,node,partition,topNOP,endNOP);
+    graph.push_back(*endNOP);
+    return partition;
   }
 
   // this is the recursive element that covers all statements, if branches, etc.
-  void createVertices(Statements& stmt, int& node, int& partition, Statement* sx)
+  void createVertices(Statements& stmt, int& node, int& partition, vertex_t* from, vertex_t*& to)
   {
     // loop through all the given statements
     for( Statements::iterator i = stmt.begin(); i != stmt.end(); i++)
@@ -65,40 +70,71 @@ public:
         {
           v.addInput(a.getInput(n));
         }
-        if( nullptr != sx)
-        {
-          // if we have been called from within an if-statement, we need to add
-          // the condition variable to this vertex's input list
-          if( sx->isIfStatement() )
-          {
-            Variable& condition = sx->if_statement().getCondition();
-            v.addInput(condition);
-          }
-        }
+        v.addLinkFrom(*from);                          // top level linkage for scheduling
+        from->addLinkTo(v);
+        v.addLinkTo(*to);
+        to->addLinkFrom(v);
       }
       // if this statement is an if-statement
       else if( i->isIfStatement() )
       {
+        // This part gets entertaining... need to substitute the if-statement for the NOP statement
+        // inside the 'to' value, such that everything preceding remains linked, only now it will be
+        // to the if-statement. Then, we modify 'to' so that it points to a new pseudo-endif
+        // vertex to be used as the next end-of-links, which gets passed back to the caller.
+
         IfStatement& fi = i->if_statement();          // grab the if-statement
-        vertex_t& v = *(new vertex_t(*i,node++));     // create a new vertex for it
-                                                      // TODO: weight of conditional
-        v.helper.partition = ++partition;             // give it the next partition number (by itself)
-        graph.push_back(v);                           // add vertex to graph
+        new (to->getNode().get().getStatement())Statement(fi); // 'to' vertex now has the if-statement
+        vertex_t* v = to;                             // let's move that to 'v', the new local 'from'
+        to = new vertex_t(*(new Statement()), 0);     // create the new pseudo-endif to get back
+
+                                                      // TODO: weight of conditional, if any
+        v->helper.partition = ++partition;            // give it the next partition number (by itself)
+        graph.push_back(*v);                          // add vertex to graph
         Variable& condition = fi.getCondition();      // add the condition variable...
-        v.addOutput(condition);                       // ...as an output
-        v.addInput(condition);                        // ...and an input
+        v->addOutput(condition);                      // ...as an output
+        v->addInput(condition);                       // ...and an input
+
+        // to keep things chained properly
+        from = v;
+
         // now, create vertices for the true branch in the next partition
-        createVertices(fi.getIfTrue(), node, ++partition, i->getStatement());
+        if( !fi.getIfTrue().empty() )
+        {
+          createVertices(fi.getIfTrue(), node, ++partition, from, to );
+          // if there is also a false branch
+          if( !fi.getIfFalse().empty() )
+          {
+            graph.push_back(*to); // save the 'to' node in the graph
+            from = to; // need to move 'to' to 'from' and create a new 'to' the keep the chain going
+            to = new vertex_t(*(new Statement()), 0);     // create the new end target for either the next partition or caller
+          }
+          // if not a false, are there more statements to come?
+          else if( std::next(i) != stmt.end() )
+          {
+            from = to; // 'to' needs to become the new 'from', and a new 'to' created
+            to = new vertex_t(*(new Statement()), 0);     // create the new end target for either the next partition or caller
+            ++partition;
+          }
+        }
+
         // and, create vertices for the false branch in the next partition
-        createVertices(fi.getIfFalse(), node, ++partition, i->getStatement());
-        // if we have another statement, it will be in the next partition
-        if( std::next(i) != stmt.end())
-          ++partition;
+        if( !fi.getIfFalse().empty() )
+        {
+          createVertices(fi.getIfFalse(), node, ++partition, from, to );
+
+          // are there more statements to come?
+          if( std::next(i) != stmt.end() )
+          {
+            from = to; // 'to' needs to become the new 'from', and a new 'to' created
+            to = new vertex_t(*(new Statement()), 0);     // create the new end target for either the next partition or caller
+            ++partition;
+          }
+        }
       }
       else if( i->isForLoop() )
       {
-        //TODO: need to handle for-loops
-        //TODO: not yet sure about when to unroll for-loop four times for FDS
+        //TODO: need to handle for-loops, and unroll four times for FDS
       }
       else
       {

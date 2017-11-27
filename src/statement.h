@@ -33,8 +33,11 @@ public:
   {
   }
 
+  Statement():stmt{ .p = nullptr }, mID( NOP ){}
+
   enum ID
   {
+    NOP,
     ASSIGNMENT,
     IF_STATEMENT,
     FOR_LOOP,
@@ -91,12 +94,20 @@ public:
     return *stmt.pCondition;
   }
 
+  bool isNOP()
+  {
+    return NOP == mID;
+  }
+
   std::string C_format()
   {
     std::string result;
 
     switch( mID )
     {
+      case NOP:
+        result = "NOP";
+        break;
       case ASSIGNMENT:
         result = stmt.pAssignment->C_format();
         break;
@@ -120,6 +131,9 @@ public:
   {
     switch( s.mID )
     {
+      case NOP:
+        out << "NOP";
+        break;
       case ASSIGNMENT:
         out << *s.stmt.pAssignment;
         break;
@@ -152,7 +166,11 @@ public:
   {
     int latency = 0;
 
-    if( isAssignment() )
+    if( isNOP() )
+    {
+      latency = 0;
+    }
+    else if( isAssignment() )
     {
       switch( assignment().getOperator().id() )
       {
@@ -197,6 +215,11 @@ public:
     return *i;
   }
 
+  Statement& addNOP()
+  {
+    return addStatement();
+  }
+
   Assignment& addAssignment( Operator& op, Variable& output, Variable& input1, Variable& input2 =
                              Assignment::dummyvar(),
                              Variable& input3 = Assignment::dummyvar(), Variable& other1 = Assignment::dummyvar(),
@@ -239,6 +262,13 @@ public:
   }
 
 private:
+  Statement& addStatement()
+  {
+    Statement* pS = new Statement();
+    push_back( *pS );
+    return *pS;
+  }
+
   Statement& addStatement( Assignment& a )
   {
     Statement* pS = new Statement( a );

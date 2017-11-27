@@ -172,7 +172,7 @@ bool Parser::processMore( Variables& vars, Statements& stmts, Tokenizer& tokens,
                     {
                       if( good ) tokens.reQueue(tmp);
                     }
-                    DEBUGOUT( "end if-statement on condtion %s\n", cond.c_str());
+                    DEBUGOUT( "end if-statement on condition %s\n", cond.c_str());
                   }
                   else
                   {

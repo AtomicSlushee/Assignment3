@@ -19,6 +19,8 @@ public:
   void ALAP(graphType& g);
   void FDS(graphType& g);
 
+  static const int NOT_SCHEDULED = -1;
+
 private:
   HLSM& hlsmTools;
 };

@@ -35,7 +35,7 @@ int main( int argc, char* argv[] )
         {
           if( parser.process( inFile,moduleVars,modelVars,program,true ) )
           {
-#if 1
+#if 0
             //##########################################################################################
             //  DEBUG AREA WHERE KEN IS PLAYING AND TRYING THINGS OUT
             //##########################################################################################
