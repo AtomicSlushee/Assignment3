@@ -55,8 +55,8 @@ public:
 
   ID id(){return mID;}
   
-  //RESOURCE_TYPE resource(){return mResource;}
-  std::string resource()
+  RESOURCE_TYPE resource(){return mResource;}
+  std::string getResourceString()
   {
     std::string resourceType;
     switch (mResource)
