@@ -43,8 +43,41 @@ public:
     FOR_LOOP,
     CONDITION
   };
+    
+  enum RESOURCE_TYPE
+  {
+    NONE,
+    ADDER_SUB,
+    MULTIPLIER,
+    LOGICAL,
+    DIV_MOD
+  };
 
   ID id(){return mID;}
+  
+  //RESOURCE_TYPE resource(){return mResource;}
+  std::string resource()
+  {
+    std::string resourceType;
+    switch (mResource)
+    {
+      case ADDER_SUB:
+        resourceType = "ADDER";
+        break;
+      case MULTIPLIER:
+        resourceType = "MULTIPLIER";
+        break;
+      case LOGICAL:
+        resourceType = "LOGICAL";
+        break;
+      case DIV_MOD:
+        resourceType = "DIVIDER";
+        break;
+      default:
+        resourceType = "NONE";
+    }
+    return resourceType;
+  }
 
   bool isAssignment()
   {
@@ -169,6 +202,7 @@ public:
     if( isNOP() )
     {
       latency = 0;
+      mResource = NONE;
     }
     else if( isAssignment() )
     {
@@ -176,17 +210,29 @@ public:
       {
         case Operator::MUL:
           latency = 2;
+          mResource = MULTIPLIER;
           break;
         case Operator::DIV:
         case Operator::MOD:
           latency = 3;
+          mResource = DIV_MOD;
+          break;
+        case Operator::DEC:
+        case Operator::INC:
+        case Operator::SUB:
+        case Operator::ADD:
+          latency = 1;
+          mResource = ADDER_SUB;
           break;
         default:
           latency = 1;
+          mResource = LOGICAL;
+          break;
       }
     }
     else if( isIfStatement() )
     {
+      // todo: which resource type? always a logical?
       latency = 1;
     }
 
@@ -205,6 +251,7 @@ private:
 
   pStatement stmt;
   ID mID;
+  RESOURCE_TYPE mResource;
 };
 
 class Statements : public std::list< Statement >
