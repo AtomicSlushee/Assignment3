@@ -7,7 +7,7 @@ Scheduler::Scheduler():hlsmTools(Singleton< HLSM >::instance())
 {
 }
 
-bool Scheduler::process(Statements& input, Statements& output)
+bool Scheduler::process(Statements& input, Statements& output, int latencyConstraint)
 {
   graphType g;
   graphType::vertices_t topo;
@@ -16,7 +16,9 @@ bool Scheduler::process(Statements& input, Statements& output)
   g.topologicalSort(topo);
   double lp = g.longestPath(topo, graphType::SCHEDULING);
   ASAP(g);
+  ALAP(g, latencyConstraint);
   dumpScheduledGraph( g, graphType::ASAP);
+  dumpScheduledGraph( g, graphType::ALAP);
 
   hlsmTools.CtoHLSM( g, output );
 
@@ -88,8 +90,70 @@ void Scheduler::ASAP(graphType& g)
   }
 }
 
-void Scheduler::ALAP(graphType& g)
+void Scheduler::ALAP(graphType& g, int latencyConstraint)
 {
+  // reset all alap times to latency constraint
+  for( auto v = g.getGraph().begin(); v != g.getGraph().end(); v++)
+  {
+	  v->get().helper.schedTime[graphType::ALAP] = NOT_SCHEDULED;
+  }
+
+  // keep cycling until all nodes scheduled
+  bool done = false;
+  while(!done)
+  {
+	  done = true; // if we get through the for loop without scheduling, we're done
+
+      for( auto v = g.getGraph().rbegin(); v != g.getGraph().rend(); v++) // using reverse iterators
+      {
+        // if this node has already been scheduled, skip it
+        if( v->get().helper.schedTime[graphType::ALAP] > NOT_SCHEDULED ) continue;
+
+        done = false; // nope, still scheduling
+
+        // does this node have any successors?
+        if( v->get().getLinksTo().empty() )
+        {
+        	v->get().helper.schedTime[graphType::ALAP] = latencyConstraint; // schedule at end
+        }
+        else
+        {
+            // check to see if all successors are scheduled
+            int minStart = latencyConstraint; // will tell us when to start if all clear
+            bool allClear = true;             // will tell us if it is all clear
+
+            // loop through all this node's successors
+            for( auto p = v->get().getLinksTo().begin(); p != v->get().getLinksTo().end(); p++)
+            {
+              // grab the latency of the successors statement operation
+              int latency = p->get().getNode().get().getStatement()->scheduleLatency();
+              // see if the successor has been scheduled
+              if( p->get().helper.schedTime[graphType::ALAP] <= NOT_SCHEDULED )
+              {
+                // nope, can't schedule this vertex
+                allClear = false;
+                break; // don't need to check other successors
+              }
+              else
+              {
+                // compute this node's start time based on successor schedule and latency
+                int nextStart = p->get().helper.schedTime[graphType::ALAP] - latency;
+                if( nextStart < minStart )
+                {
+                  minStart = nextStart; // save the min
+                }
+              }
+            }
+
+            // see if all successors are scheduled
+            if( allClear )
+            {
+              // yes, schedule this node
+              v->get().helper.schedTime[graphType::ALAP] = minStart;
+            }
+        }
+      }
+  }
 }
 
 void Scheduler::FDS(graphType& g)

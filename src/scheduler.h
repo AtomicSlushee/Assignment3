@@ -17,9 +17,9 @@ private:
   Scheduler();
 
 public:
-  bool process(Statements& input, Statements& output);
+  bool process(Statements& input, Statements& output, int latencyConstraint);
   void ASAP(graphType& g);
-  void ALAP(graphType& g);
+  void ALAP(graphType& g, int latencyConstraint);
   void FDS(graphType& g);
 
   static const int NOT_SCHEDULED = -1;

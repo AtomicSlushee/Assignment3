@@ -47,6 +47,7 @@ int main( int argc, char* argv[] )
               double lp = g.longestPath(topo, graphType::UNITY);
               // let's try a scheduling algorithm
               scheduler.ASAP(g);
+              scheduler.ALAP(g, latency);
 
               //gather some stats
               struct Stats
@@ -111,7 +112,7 @@ int main( int argc, char* argv[] )
             }
             //##########################################################################################
 #endif
-            if( scheduler.process( program, schedule ) )
+            if( scheduler.process( program, schedule, latency ) )
             {
               if( verilog.HLSM( outFile, "", moduleVars, modelVars, schedule ))
               {
