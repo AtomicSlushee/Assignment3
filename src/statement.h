@@ -55,29 +55,44 @@ public:
 
   ID id(){return mID;}
   
-  RESOURCE_TYPE resource(){return mResource;}
-  std::string getResourceString()
+  RESOURCE_TYPE getResource()
   {
-    std::string resourceType;
-    switch (mResource)
+    RESOURCE_TYPE resource = NONE;
+    
+    if( isNOP() )
     {
-      case ADDER_SUB:
-        resourceType = "ADDER";
-        break;
-      case MULTIPLIER:
-        resourceType = "MULTIPLIER";
-        break;
-      case LOGICAL:
-        resourceType = "LOGICAL";
-        break;
-      case DIV_MOD:
-        resourceType = "DIVIDER";
-        break;
-      default:
-        resourceType = "NONE";
+      resource = NONE; // just being verbose
     }
-    return resourceType;
+    else if( isAssignment() )
+    {
+      switch( assignment().getOperator().id() )
+      {
+        case Operator::MUL:
+          resource = MULTIPLIER;
+          break;
+        case Operator::DIV:
+        case Operator::MOD:
+          resource = DIV_MOD;
+          break;
+        case Operator::DEC:
+        case Operator::INC:
+        case Operator::SUB:
+        case Operator::ADD:
+          resource = ADDER_SUB;
+          break;
+        default:
+          resource = LOGICAL;
+          break;
+      }
+    }
+    else if( isIfStatement() )
+    {
+      resource = LOGICAL;
+    }
+    
+    return resource;
   }
+
 
   bool isAssignment()
   {
@@ -202,7 +217,6 @@ public:
     if( isNOP() )
     {
       latency = 0;
-      mResource = NONE;
     }
     else if( isAssignment() )
     {
@@ -210,29 +224,24 @@ public:
       {
         case Operator::MUL:
           latency = 2;
-          mResource = MULTIPLIER;
           break;
         case Operator::DIV:
         case Operator::MOD:
           latency = 3;
-          mResource = DIV_MOD;
           break;
         case Operator::DEC:
         case Operator::INC:
         case Operator::SUB:
         case Operator::ADD:
           latency = 1;
-          mResource = ADDER_SUB;
           break;
         default:
           latency = 1;
-          mResource = LOGICAL;
           break;
       }
     }
     else if( isIfStatement() )
     {
-      // todo: which resource type? always a logical?
       latency = 1;
     }
 
@@ -251,7 +260,6 @@ private:
 
   pStatement stmt;
   ID mID;
-  RESOURCE_TYPE mResource;
 };
 
 class Statements : public std::list< Statement >
