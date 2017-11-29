@@ -10,31 +10,31 @@ class Statement
 {
 public:
   Statement( Assignment& a )
-      : stmt
-        { .pAssignment = &a }, mID( ASSIGNMENT )
+  : stmt
+  { .pAssignment = &a }, mID( ASSIGNMENT )
   {
   }
-
+  
   Statement( IfStatement& i )
-      : stmt
-        { .pIfStatement = &i }, mID( IF_STATEMENT )
+  : stmt
+  { .pIfStatement = &i }, mID( IF_STATEMENT )
   {
   }
-
+  
   Statement( ForLoop& f )
-      : stmt
-        { .pForLoop = &f }, mID( FOR_LOOP )
+  : stmt
+  { .pForLoop = &f }, mID( FOR_LOOP )
   {
   }
-
+  
   Statement( Condition& c )
-      : stmt
-        { .pCondition = &c }, mID( CONDITION )
+  : stmt
+  { .pCondition = &c }, mID( CONDITION )
   {
   }
-
+  
   Statement():stmt{ .p = nullptr }, mID( NOP ){}
-
+  
   enum ID
   {
     NOP,
@@ -43,7 +43,7 @@ public:
     FOR_LOOP,
     CONDITION
   };
-    
+  
   enum RESOURCE_TYPE
   {
     NONE,
@@ -52,7 +52,7 @@ public:
     LOGICAL,
     DIV_MOD
   };
-
+  
   ID id(){return mID;}
   
   RESOURCE_TYPE getResource()
@@ -92,65 +92,65 @@ public:
     
     return resource;
   }
-
-
+  
+  
   bool isAssignment()
   {
     return ASSIGNMENT == mID;
   }
-
+  
   Assignment& assignment()
   {
     if( ASSIGNMENT != mID )
       throw;
     return *stmt.pAssignment;
   }
-
+  
   bool isIfStatement()
   {
     return IF_STATEMENT == mID;
   }
-
+  
   IfStatement& if_statement()
   {
     if( IF_STATEMENT != mID )
       throw;
     return *stmt.pIfStatement;
   }
-
+  
   bool isForLoop()
   {
     return FOR_LOOP == mID;
   }
-
+  
   ForLoop& for_loop()
   {
     if( FOR_LOOP != mID )
       throw;
     return *stmt.pForLoop;
   }
-
+  
   bool isCondition()
   {
     return CONDITION == mID;
   }
-
+  
   Condition& condition()
   {
     if( CONDITION != mID )
       throw;
     return *stmt.pCondition;
   }
-
+  
   bool isNOP()
   {
     return NOP == mID;
   }
-
+  
   std::string C_format()
   {
     std::string result;
-
+    
     switch( mID )
     {
       case NOP:
@@ -173,7 +173,7 @@ public:
     }
     return result;
   }
-
+  
   // stream override to output the assignment in Verilog
   friend std::ostream& operator<<( std::ostream& out, Statement& s )
   {
@@ -199,21 +199,21 @@ public:
     }
     return out;
   }
-
+  
   Statement* getStatement()
   {
     return this;
   }
-
+  
   bool operator==( const Statement& a)
   {
     return (mID == a.mID) && (stmt.p == a.stmt.p);
   }
-
+  
   int scheduleLatency()
   {
     int latency = 0;
-
+    
     if( isNOP() )
     {
       latency = 0;
@@ -244,10 +244,10 @@ public:
     {
       latency = 1;
     }
-
+    
     return latency;
   }
-
+  
 private:
   union pStatement
   {
@@ -257,7 +257,7 @@ private:
     Condition* pCondition;
     void* p;
   };
-
+  
   pStatement stmt;
   ID mID;
 };
@@ -269,22 +269,22 @@ public:
   {
     return *i;
   }
-
+  
   Statement& addNOP()
   {
     return addStatement();
   }
-
+  
   Assignment& addAssignment( Operator& op, Variable& output, Variable& input1, Variable& input2 =
-                             Assignment::dummyvar(),
-                             Variable& input3 = Assignment::dummyvar(), Variable& other1 = Assignment::dummyvar(),
-                             Variable& other2 = Assignment::dummyvar() )
+                            Assignment::dummyvar(),
+                            Variable& input3 = Assignment::dummyvar(), Variable& other1 = Assignment::dummyvar(),
+                            Variable& other2 = Assignment::dummyvar() )
   {
     Assignment* pA = new Assignment( mCount++,op,output,input1,input2,input3,other1,other2 );
     addStatement( *pA );
     return *pA;
   }
-
+  
   IfStatement& addIfStatement( Variable& condition )
   {
     Statements* pT = new Statements;
@@ -293,7 +293,7 @@ public:
     addStatement( *pI );
     return *pI;
   }
-
+  
   ForLoop& addForLoop()
   {
     Statements* pI = new Statements;
@@ -304,18 +304,18 @@ public:
     addStatement( *pF );
     return *pF;
   }
-
+  
   Condition& addCondition( Variable& left, Operator& logic, Variable& right)
   {
     Condition* pC = new Condition( left, logic, right);
     addStatement( *pC );
     return *pC;
   }
-
+  
   Statements() : mCount( 0 )
   {
   }
-
+  
 private:
   Statement& addStatement()
   {
@@ -323,35 +323,35 @@ private:
     push_back( *pS );
     return *pS;
   }
-
+  
   Statement& addStatement( Assignment& a )
   {
     Statement* pS = new Statement( a );
     push_back( *pS );
     return *pS;
   }
-
+  
   Statement& addStatement( IfStatement& i )
   {
     Statement* pS = new Statement( i );
     push_back( *pS );
     return *pS;
   }
-
+  
   Statement& addStatement( ForLoop& f )
   {
     Statement* pS = new Statement( f );
     push_back( *pS );
     return *pS;
   }
-
+  
   Statement& addStatement( Condition& c )
   {
     Statement* pS = new Statement( c );
     push_back( *pS );
     return *pS;
   }
-
+  
   int mCount;
 };
 
