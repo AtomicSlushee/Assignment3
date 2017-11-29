@@ -3,6 +3,11 @@
 #include "operator.h"
 #include "vertex.hpp"
 
+// dElete me
+#include <iostream>
+#include "statement.h"
+#include <vector>
+
 Scheduler::Scheduler():hlsmTools(Singleton< HLSM >::instance())
 {
 }
@@ -17,9 +22,12 @@ bool Scheduler::process(Statements& input, Statements& output, int latencyConstr
   double lp = g.longestPath(topo, graphType::SCHEDULING);
   ASAP(g);
   ALAP(g, latencyConstraint);
+  FDS(g, latencyConstraint);
+  
   dumpScheduledGraph( g, graphType::ASAP);
   dumpScheduledGraph( g, graphType::ALAP);
-
+  dumpScheduledGraph(g, graphType::FDS);
+  
   hlsmTools.CtoHLSM( g, output );
 
   return true;
@@ -156,8 +164,113 @@ void Scheduler::ALAP(graphType& g, int latencyConstraint)
   }
 }
 
-void Scheduler::FDS(graphType& g)
+void Scheduler::FDS(graphType& g, int latencyConstraint)
 {
+  // Minimize resources under a latency constraint
+  
+  // make sure that nothing is scheduled for FDS
+  // this helper is awesome! a schedule time for each algorithm? brilliant.
+  
+  int timewidth = 0;
+  
+  for( auto v = g.getGraph().begin(); v != g.getGraph().end(); v++)
+  {
+    v->get().helper.schedTime[graphType::FDS] = NOT_SCHEDULED;
+  }
+  
+  // keep cycling until all nodes scheduled
+  bool done = false;
+  while(!done)
+  {
+    // repeat until all ops are scheduled
+    done = true; // if we get through the for loop without scheduling, we're done
+    
+    
+    for( auto v = g.getGraph().begin(); v != g.getGraph().end(); v++)
+    {
+      // first, compute time frames for every node.
+      // todo: really? every node every time? meh guess so.
+      // Fortunately, this is really easy now.
+      // The time frame is just the earliest a node can be scheduled (ASAP)
+      // followed by the latest (ALAP)
+      ALAP(g, latencyConstraint); // now, unless I change g at any point in this function, there is no point in doing this
+      ASAP(g);
+      
+      // The width of the timeframe for every node is the ALAP - ASAP + 1
+      int leftEdge = v->get().helper.schedTime[graphType::ASAP];
+      int rightEdge = v->get().helper.schedTime[graphType::ALAP];
+      
+      timewidth = rightEdge - leftEdge + 1;
+      
+      std::cout << "leftEdge " << leftEdge << " rightEdge " << rightEdge << " Timewidth " << timewidth << std::endl;
+      
+      // compute the operations and type probabilities
+      // Operational Probability is easy. just 1/timewidth for times in the range. 0 else.
+      
+      for (int time = 1; time <= latencyConstraint; time++)
+      {
+        if (time >= leftEdge && time <= rightEdge)
+        {
+          float prob = 1.0/timewidth;
+          std::cout << "op prob " << prob <<  " recorded in cycle " << time << std::endl;
+          v->get().opProb.push_back(prob);
+        }
+        else
+        {
+          v->get().opProb.push_back(0.0);
+        }
+        
+      }
+      std::cout << "Operational Probabilities [cycle][probability]" << std::endl;
+      
+      int time = 1;
+      for (auto t = v->get().opProb.begin(); t != v->get().opProb.end(); t++)
+      {
+        std::cout << "[" << time++ << "][" << *t << "]" << std::endl;
+      }
+    }
+    // now compute the type distribution
+    // Type Distribution is the sum of probabilities of the operations implemented by a specific
+    // resource at any time step of interest
+    
+    // the later it gets, the quicker and dirtier this solution is
+    std::vector<float> ad;
+    for (int i = 0 ; i < latencyConstraint; i++)
+    {
+      ad.push_back(0.0);
+    }
+    float md = 0.0;
+    float dd = 0.0;
+    float ld = 0.0;
+    for( auto v = g.getGraph().begin(); v != g.getGraph().end(); v++)
+    {
+      
+      
+      // for each node sum the probabilities that the resource is being used in that time step
+      for (int timestep = 0; timestep < latencyConstraint; timestep++)
+      {
+        /*
+         ADDER_SUB,
+         MULTIPLIER,
+         LOGICAL,
+         DIV_MOD
+         */
+        if (v->get().getNode().get().getResource() == Statement::ADDER_SUB)
+        {
+          std::list<float>::iterator it = v->get().opProb.begin();
+          std::advance(it,timestep);
+          ad[timestep] += *it;
+        }
+        
+      }
+    }
+    std::cout << " ADD Probabilities for each timestep" << std::endl;
+    std::cout << " [cycle][Probability of use]" << std::endl;
+    for (int timestep = 0; timestep < latencyConstraint; timestep++)
+    {
+      std::cout << " [" << timestep + 1 << "]" << "[" << ad[timestep] << "]" << std::endl;
+    }
+  }
 }
 
 void Scheduler::buildPartTimeMap(partitionMap_t& m, graphType& g, graphType::ScheduleID s)

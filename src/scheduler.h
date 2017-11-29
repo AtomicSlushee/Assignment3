@@ -20,7 +20,7 @@ public:
   bool process(Statements& input, Statements& output, int latencyConstraint);
   void ASAP(graphType& g);
   void ALAP(graphType& g, int latencyConstraint);
-  void FDS(graphType& g);
+  void FDS(graphType& g, int latencyConstraint);
 
   static const int NOT_SCHEDULED = -1;
 

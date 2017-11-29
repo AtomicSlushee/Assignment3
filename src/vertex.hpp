@@ -13,6 +13,11 @@ template< class NODETYPE, class IOTYPE, class HELPER >
     typedef std::list< vertref_t > vertices_t;
     typedef std::list< ioref_t > iolist_t;
 
+      // just something quick here:
+      // need a list of probabilities
+    std::list<float> opProb;
+    
+
     HELPER helper;
 
     Vertex( NODETYPE& r, int n )
