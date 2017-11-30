@@ -48,6 +48,7 @@ public:
     // create a top and bottom NOP to hook everything up in between
     vertex_t* topNOP = new vertex_t(*(new Statement()), 0);
     vertex_t* endNOP = new vertex_t(*(new Statement()) ,0);
+    graph.push_back( *topNOP );
     createVertices(stmt,node,partition,topNOP,endNOP);
     endNOP->helper.partition = partition;
     graph.push_back(*endNOP);

@@ -2,7 +2,7 @@
 #define vertex_hpp
 
 #include <functional>
-
+#include <vector>
 template< class NODETYPE, class IOTYPE, class HELPER >
   class Vertex
   {
@@ -15,7 +15,10 @@ template< class NODETYPE, class IOTYPE, class HELPER >
 
       // just something quick here:
       // need a list of probabilities
-    std::list<float> opProb;
+    //std::list<float> opProb;
+    std::vector<float> opProb;
+    std::list<float> selfForce;
+    float timeFrame[2] = {0};
     
 
     HELPER helper;
@@ -87,7 +90,6 @@ template< class NODETYPE, class IOTYPE, class HELPER >
     {
       return this;
     }
-
   private:
     noderef_t rNode;
     int nodeNum;

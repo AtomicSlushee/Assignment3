@@ -24,8 +24,8 @@ bool Scheduler::process(Statements& input, Statements& output, int latencyConstr
   ALAP(g, latencyConstraint);
   FDS(g, latencyConstraint);
   
-  dumpScheduledGraph( g, graphType::ASAP);
-  dumpScheduledGraph( g, graphType::ALAP);
+  //dumpScheduledGraph( g, graphType::ASAP);
+  //dumpScheduledGraph( g, graphType::ALAP);
   dumpScheduledGraph(g, graphType::FDS);
   
   hlsmTools.CtoHLSM( g, output );
@@ -172,12 +172,28 @@ void Scheduler::FDS(graphType& g, int latencyConstraint)
   // this helper is awesome! a schedule time for each algorithm? brilliant.
   
   int timewidth = 0;
-  
+  int timestep; // for iterating through times
   for( auto v = g.getGraph().begin(); v != g.getGraph().end(); v++)
   {
     v->get().helper.schedTime[graphType::FDS] = NOT_SCHEDULED;
   }
-  
+  ALAP(g, latencyConstraint);
+  ASAP(g);
+  for( auto v = g.getGraph().begin(); v != g.getGraph().end(); v++)
+  {
+    // first, compute time frames for every node.
+    // todo: really? every node every time? meh guess so.
+    // Fortunately, this is really easy now.
+    // The time frame is just the earliest a node can be scheduled (ASAP)
+    // followed by the latest (ALAP)
+    
+    
+    // The width of the timeframe for every node is the ALAP - ASAP + 1
+    int leftEdge = v->get().helper.schedTime[graphType::ASAP];
+    int rightEdge = v->get().helper.schedTime[graphType::ALAP];
+    v->get().timeFrame[0] = leftEdge;
+    v->get().timeFrame[1] = rightEdge;
+  }
   // keep cycling until all nodes scheduled
   bool done = false;
   while(!done)
@@ -193,8 +209,7 @@ void Scheduler::FDS(graphType& g, int latencyConstraint)
       // Fortunately, this is really easy now.
       // The time frame is just the earliest a node can be scheduled (ASAP)
       // followed by the latest (ALAP)
-      ALAP(g, latencyConstraint); // now, unless I change g at any point in this function, there is no point in doing this
-      ASAP(g);
+      
       
       // The width of the timeframe for every node is the ALAP - ASAP + 1
       int leftEdge = v->get().helper.schedTime[graphType::ASAP];
@@ -202,23 +217,24 @@ void Scheduler::FDS(graphType& g, int latencyConstraint)
       
       timewidth = rightEdge - leftEdge + 1;
       
-      std::cout << "leftEdge " << leftEdge << " rightEdge " << rightEdge << " Timewidth " << timewidth << std::endl;
+      std::cout << "Node " << v->get().getNodeNumber() << " leftEdge " << leftEdge << " rightEdge " << rightEdge << " Timewidth " << timewidth << std::endl;
       
       // compute the operations and type probabilities
       // Operational Probability is easy. just 1/timewidth for times in the range. 0 else.
       
-      for (int time = 1; time <= latencyConstraint; time++)
+      for (timestep = 1; timestep <= latencyConstraint; timestep++)
       {
-        if (time >= leftEdge && time <= rightEdge)
+        if (timestep >= leftEdge && timestep <= rightEdge)
         {
           float prob = 1.0/timewidth;
-          std::cout << "op prob " << prob <<  " recorded in cycle " << time << std::endl;
+          std::cout << "op prob " << prob <<  " recorded in cycle " << timestep << std::endl;
           v->get().opProb.push_back(prob);
         }
         else
         {
           v->get().opProb.push_back(0.0);
         }
+        v->get().selfForce.push_back(0.0); // need a list that is the same size and starts with all 0.0s
         
       }
       std::cout << "Operational Probabilities [cycle][probability]" << std::endl;
@@ -235,13 +251,16 @@ void Scheduler::FDS(graphType& g, int latencyConstraint)
     
     // the later it gets, the quicker and dirtier this solution is
     std::vector<float> ad;
-    for (int i = 0 ; i < latencyConstraint; i++)
+    for ( timestep = 0 ; timestep < latencyConstraint; timestep++)
     {
       ad.push_back(0.0);
+      
     }
     float md = 0.0;
     float dd = 0.0;
     float ld = 0.0;
+    // TODO: make the obvious insertions. better yet, find a better way
+    
     for( auto v = g.getGraph().begin(); v != g.getGraph().end(); v++)
     {
       
@@ -257,7 +276,7 @@ void Scheduler::FDS(graphType& g, int latencyConstraint)
          */
         if (v->get().getNode().get().getResource() == Statement::ADDER_SUB)
         {
-          std::list<float>::iterator it = v->get().opProb.begin();
+          std::vector<float>::iterator it = v->get().opProb.begin();
           std::advance(it,timestep);
           ad[timestep] += *it;
         }
@@ -266,10 +285,54 @@ void Scheduler::FDS(graphType& g, int latencyConstraint)
     }
     std::cout << " ADD Probabilities for each timestep" << std::endl;
     std::cout << " [cycle][Probability of use]" << std::endl;
-    for (int timestep = 0; timestep < latencyConstraint; timestep++)
+    for ( timestep = 1; timestep <= latencyConstraint; timestep++)
     {
-      std::cout << " [" << timestep + 1 << "]" << "[" << ad[timestep] << "]" << std::endl;
+      std::cout << " [" << timestep << "]" << "[" << ad[timestep -1] << "]" << std::endl;
     }
+    
+    // Compute self forces, pred/successor forces, and total forces
+    
+    // for each node, compute the self force
+    for( auto v = g.getGraph().begin(); v != g.getGraph().end(); v++)
+    {
+      // from the look of it, compute a self force for each time step
+
+        float selfForce = 0.0;
+        // damn, have to do it this way again? if only I had started earlier I
+        // could think of a better way to do this.
+        if (v->get().getNode().get().getResource() == Statement::ADDER_SUB)
+        {
+          selfForce = 0.0;
+          for (int j = 1; j <= latencyConstraint; j++)
+          {
+            float temp = 0.0;
+            for (int k = 1; k <= latencyConstraint; k++)
+            {
+              float opProbabilty = 0.0;
+              float typeDist = 0.0;
+              bool isUnity = (j==k);
+              opProbabilty =v->get().opProb[j];
+              typeDist = ad[j-1];// todo shouldn't need to do j-1 for resource stuff
+              
+              temp = opProbabilty*(isUnity - typeDist);
+              //temp = v->get().opProb[j]*((j==k) - ad[j - 1]);
+              selfForce += temp;
+            }
+            // todo better name than j
+            
+            std::cout << "Self force for node " << v->get().getNodeNumber() << " at timestep " << j << " is " << temp << std::endl;
+            //std::cout << "opProb[" <<j<<"] = " <<v->get().opProb[j] << std::endl;
+            //std::cout << ad[j - 1];
+            
+          }
+
+          
+          std::cout << "Total Self force is " << selfForce<<std::endl;
+        v->get().selfForce.push_back(selfForce);
+      }
+      
+    }
+
   }
 }
 
