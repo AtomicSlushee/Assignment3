@@ -112,7 +112,7 @@ int main( int argc, char* argv[] )
             }
             //##########################################################################################
 #endif
-            if( scheduler.process( program, schedule, latency ) )
+            if( scheduler.process( program, schedule, latency, modelVars ) )
             {
               if( verilog.HLSM( outFile, "", moduleVars, modelVars, schedule ))
               {

@@ -13,7 +13,17 @@ class Variable
 public:
   // constructor
   Variable( std::string name_, Type& type_, IOClass& ioclass_ )
-      : mName( name_ ), mType( type_ ), mIOClass( ioclass_ )
+      : mName( name_ ), mType( type_ ), mIOClass( ioclass_ ), mConst(false), mValue( 0 )
+  {
+  }
+
+  // constructor for constant
+  Variable( std::string name_, long const_ )
+      : mName( name_ ),
+        mType(Singleton<Types>::instance().getType("Int32")),
+        mIOClass( Singleton<IOClasses>::instance().getIOClass("const")),
+        mConst( true ),
+        mValue( const_ )
   {
   }
 
@@ -29,6 +39,12 @@ public:
     return mType.isSigned();
   }
 
+  // return whether the variable is actually a constant
+  bool isConstant()
+  {
+    return mConst;
+  }
+
   // return the bit width of the variable
   int width()
   {
@@ -41,13 +57,31 @@ public:
     return mIOClass.id();
   }
 
+  // return the variable in a C format
+  std::string C_format()
+  {
+    std::string out;
+    if( mConst )
+    {
+      out = std::to_string( mValue );
+    }
+    else
+    {
+      out = mName;
+    }
+    return out;
+  }
+
   // stream overload to output the variable declaration in Verilog
   friend std::ostream& operator<<( std::ostream& out, Variable& a )
   {
-    out << a.mIOClass.name();
-    if( a.width() > 1 )
-      out << " [" << a.width() - 1 << ":0]";
-    out << " " << a.name() << ";";
+    if( !a.mConst )
+    {
+      out << a.mIOClass.vname();
+      if( a.width() > 1 )
+        out << " [" << a.width() - 1 << ":0]";
+      out << " " << a.name() << ";";
+    }
     return out;
   }
 
@@ -58,16 +92,26 @@ public:
            (a.mName == mName);
   }
 
+  long getValue()
+  {
+    return mValue;
+  }
+
 private:
   std::string mName;
   Type& mType;
   IOClass& mIOClass;
+  bool mConst;
+  long mValue;
 };
 
 class Variables : public std::map< std::string, Variable >
 {
 private:
   typedef std::pair< std::string, Variable > pair_t;
+
+public:
+  static std::string nameState(){static std::string name="state"; return name;}
 
 public:
   Variable& operator[](iterator i)

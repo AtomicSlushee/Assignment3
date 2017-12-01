@@ -17,7 +17,7 @@ private:
   Scheduler();
 
 public:
-  bool process(Statements& input, Statements& output, int latencyConstraint);
+  bool process(Statements& input, Statements& output, int latencyConstraint, Variables& modelVars);
   void ASAP(graphType& g);
   void ALAP(graphType& g, int latencyConstraint);
   void FDS(graphType& g, int latencyConstraint);

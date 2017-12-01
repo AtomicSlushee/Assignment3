@@ -112,10 +112,12 @@ public:
     return mSigned;
   }
 
-  std::string C_format()
+  std::string C_format(bool nonblocking = false)
   {
-    std::string out = mResult.name() + " " + ops.getOperatorByID( Operator::REG ).name() + " "
-        + mOperand1.name();
+    std::string out = mResult.name() + " ";
+    if (nonblocking)
+      out += "<";
+    out += ops.getOperatorByID( Operator::REG ).name() + " " + mOperand1.name();
     if( (mOperator.id() == Operator::INC) || (mOperator.id() == Operator::DEC) )
     {
       out += mOperator.name();
@@ -179,7 +181,7 @@ public:
   static Variable& dummyvar()
   {
     static Type dummytype( "dummy",1,false );
-    static IOClass dummyio( "dummy",IOClass::DUMMY );
+    static IOClass dummyio( "dummy",IOClass::DUMMY,"dummy" );
     static Variable dummyvar( "dummy",dummytype,dummyio );
     return dummyvar;
   }

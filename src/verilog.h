@@ -22,6 +22,12 @@ private:
   void DeclareVariableList(std::ofstream& out, Variables& vars, std::string comment="");
   void DeclareVariablesHLSM(std::ofstream& out, Variables& vars);
   void EndModule(std::ofstream& out);
+
+private:
+  enum INDENT { CURRENT, THEN_IN, IN = THEN_IN, THEN_OUT, OUT = THEN_OUT, IN_THEN, OUT_THEN, IN_THEN_OUT };
+  int mIndent = 0;
+  std::string Indent(INDENT i);
+  void setIndent(int i){mIndent=i;}
 };
 
 #endif//__verilog_h__

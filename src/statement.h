@@ -10,30 +10,34 @@ class Statement
 {
 public:
   Statement( Assignment& a )
-  : stmt
-  { .pAssignment = &a }, mID( ASSIGNMENT )
+      : stmt
+        { .pAssignment = &a }, mID( ASSIGNMENT )
   {
   }
-  
+
   Statement( IfStatement& i )
-  : stmt
-  { .pIfStatement = &i }, mID( IF_STATEMENT )
+      : stmt
+        { .pIfStatement = &i }, mID( IF_STATEMENT )
   {
   }
-  
+
   Statement( ForLoop& f )
-  : stmt
-  { .pForLoop = &f }, mID( FOR_LOOP )
+      : stmt
+        { .pForLoop = &f }, mID( FOR_LOOP )
   {
   }
-  
+
   Statement( Condition& c )
-  : stmt
-  { .pCondition = &c }, mID( CONDITION )
+      : stmt
+        { .pCondition = &c }, mID( CONDITION )
   {
   }
-  
-  Statement():stmt{ .p = nullptr }, mID( NOP ){}
+
+  Statement()
+      : stmt
+        { .p = nullptr }, mID( NOP )
+  {
+  }
   
   enum ID
   {
@@ -147,7 +151,7 @@ public:
     return NOP == mID;
   }
   
-  std::string C_format()
+  std::string C_format(bool nonblocking = false)
   {
     std::string result;
     
@@ -157,7 +161,7 @@ public:
         result = "NOP";
         break;
       case ASSIGNMENT:
-        result = stmt.pAssignment->C_format();
+        result = stmt.pAssignment->C_format( nonblocking );
         break;
       case IF_STATEMENT:
         result = stmt.pIfStatement->C_format();

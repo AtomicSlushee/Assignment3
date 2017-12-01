@@ -1,27 +1,45 @@
 #include "verilog.h"
 #include "parser.h"
 
-static const char* indent = "    ";
-
 Verilog::Verilog()
 {
+}
+
+std::string Verilog::Indent( INDENT i = CURRENT )
+{
+  static std::string in = "  ";
+  auto go = [](int indent){std::string x; while(indent--)x+=in;return x;};
+  switch( i )
+  {
+    case THEN_IN: return go(mIndent++);
+    case THEN_OUT: return go(mIndent--);
+    case IN_THEN: return go(++mIndent);
+    case OUT_THEN: return go(--mIndent);
+    case IN_THEN_OUT: return go(mIndent+1);
+    case CURRENT:
+    default:
+      return go(mIndent);
+  }
 }
 
 bool Verilog::ComponentDatapath( std::ofstream& out, std::string name, Variables& vars, Statements& stmts )
 {
   bool success = true;
 
-  DeclareTimescale(out);
-  DeclareModule(out,"m_"+name,vars);
-  DeclareVariableList(out,vars);
+  setIndent( 0 );
+  DeclareTimescale( out );
+  DeclareModule( out,"m_" + name,vars );
+  Indent( IN );
+  DeclareVariableList( out,vars );
 
   // output the assignments
-  for (Statements::iterator i = stmts.begin(); i != stmts.end(); i++)
+  for( Statements::iterator i = stmts.begin(); i != stmts.end(); i++ )
   {
-    out << indent << stmts[i] << std::endl;
+    out << Indent() << stmts[i] << std::endl;
   }
 
-  EndModule(out);
+  Indent( OUT );
+  EndModule( out );
 
   return success;
 }
@@ -30,26 +48,43 @@ bool Verilog::HLSM( std::ofstream& out, std::string name, Variables& vars, Varia
 {
   bool success = true;
 
-  DeclareModule( out, "HLSM", vars);
-  DeclareVariableList(out,vars);
-  DeclareVariableList(out,mvars,"Model Variables");
+  setIndent( 0 );
+  DeclareModule( out,"HLSM",vars );
+  Indent( IN );
+  DeclareVariableList( out,vars );
+  DeclareVariableList( out,mvars,"Model Variables" );
 
-  out << indent << "// Model Procedure" << std::endl;
-  out << indent << "always @(posedge " << builtIn::clock.name() << ") begin" << std::endl;
+  out << Indent() << "// Model Procedure" << std::endl;
 
-  //TODO
+  // KLUDGE: just put the initial section in by hand
+  out << Indent( THEN_IN ) << "initial begin" << std::endl;
+  out << Indent() << builtIn::done.name() << " <= 0;" << std::endl;
+  out << Indent() << Variables::nameState() << " <= 0;" << std::endl;
+  out << Indent( OUT_THEN ) << "end" << std::endl << std::endl;
 
-  out << indent << "end" << std::endl;
+  // now for the state machine itself
+  out << Indent( THEN_IN ) << "always @(posedge " << builtIn::clock.name() << ") begin" << std::endl;
 
-  EndModule(out);
+  // first, kludge the reset check and beginning of case statement
+  out << Indent( THEN_IN ) << "if (" << builtIn::reset.name() << " == 1)" << std::endl;
+  out << Indent( THEN_OUT ) << Variables::nameState() << " <= 0;" << std::endl;
+  out << Indent( THEN_IN ) << "else case (" << Variables::nameState() << ")" << std::endl;
+
+  //TODO - body using the statements passed in
+
+  out << Indent( OUT_THEN ) << "endcase" << std::endl;
+  out << Indent( OUT_THEN ) << "end" << std::endl;
+
+  Indent( OUT );
+  EndModule( out );
 
   return success;
 }
 
-void Verilog::DeclareTimescale(std::ofstream& out)
+void Verilog::DeclareTimescale( std::ofstream& out )
 {
   // timescale
-  out << "`timescale 1ns / 1ps" << std::endl;
+  out << Indent() << "`timescale 1ns / 1ps" << std::endl;
 }
 
 void Verilog::DeclareModule(std::ofstream& out, std::string name, Variables& vars)
@@ -57,7 +92,7 @@ void Verilog::DeclareModule(std::ofstream& out, std::string name, Variables& var
   bool comma = false;
 
   // declare module
-  out << "module " << name << "(";
+  out << Indent() << "module " << name << "(";
   for (Variables::iterator i = vars.begin(); i != vars.end(); i++)
   {
     if( vars[i].ioClass() == IOClass::INPUT )
@@ -84,7 +119,7 @@ void Verilog::DeclareModule(std::ofstream& out, std::string name, Variables& var
 void Verilog::EndModule(std::ofstream& out)
 {
   // end the module
-  out << "endmodule" << std::endl;
+  out << Indent() << "endmodule" << std::endl;
 }
 
 void Verilog::DeclareVariableList(std::ofstream& out, Variables& vars, std::string comment)
@@ -92,13 +127,13 @@ void Verilog::DeclareVariableList(std::ofstream& out, Variables& vars, std::stri
   // if there's a comment, use it
   if( !comment.empty() )
   {
-    out << indent << "// " << comment << std::endl;
+    out << Indent() << "// " << comment << std::endl;
   }
 
   // output the variable declarations
   for (Variables::iterator i = vars.begin(); i != vars.end(); i++)
   {
-    out << indent << vars[i] << std::endl;
+    out << Indent() << vars[i] << std::endl;
   }
 
   out << std::endl;
