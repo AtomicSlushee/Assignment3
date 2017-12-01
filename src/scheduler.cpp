@@ -20,9 +20,9 @@ bool Scheduler::process(Statements& input, graphType& output, int latencyConstra
   g.createWeightedGraph( input );
   g.topologicalSort(topo);
   double lp = g.longestPath(topo, graphType::SCHEDULING);
-  //ASAP(g);
-  //ALAP(g, latencyConstraint);
-  FDS(g, latencyConstraint);
+  ASAP(g);
+//  ALAP(g, latencyConstraint);
+//  FDS(g, latencyConstraint);
   
   dumpScheduledGraph( g, graphType::ASAP);
   //dumpScheduledGraph( g, graphType::ALAP);

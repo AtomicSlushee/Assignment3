@@ -87,7 +87,7 @@ bool Verilog::HLSM( std::ofstream& out, std::string name, Variables& vars, Varia
 
   // body using the map of statements passed in
   int lastState = 0;
-  for( auto i = m.begin(); i != m.end(); i++)
+  for( auto i = std::next(m.begin()); i != m.end(); i++)
   {
     for( auto j = i->second.begin(); j != i->second.end(); j++)
     {
@@ -96,6 +96,14 @@ bool Verilog::HLSM( std::ofstream& out, std::string name, Variables& vars, Varia
         graphType::vertex_t* s = *k;
         if( lastState != s->helper.schedTime[id])
         {
+          // handle empty wait states
+          while( lastState+1 < s->helper.schedTime[id] )
+          {
+            lastState++;
+            out << Indent( THEN_OUT ) << Variables::nameState() << " <= " << lastState << ";" << std::endl;
+            out << Indent( THEN_IN ) << lastState << ": begin" << std::endl;
+          }
+          // now transition to next state
           lastState = s->helper.schedTime[id];
           out << Indent( THEN_OUT ) << Variables::nameState() << " <= " << lastState << ";" << std::endl;
           if( 1 == lastState ) Indent(OUT);
@@ -111,13 +119,20 @@ bool Verilog::HLSM( std::ofstream& out, std::string name, Variables& vars, Varia
         }
         else
         {
-          if( !s->getNode().get().isNOP() )
+          if( s->getNode().get().isElse() )
+          {
+            out << Indent( THEN_OUT ) << Variables::nameState() << " <= TODO3 " << m[s->helper.nextPart].begin()->first << ";" << std::endl;
+            out << Indent() << "end" << std::endl;
+            lastState++;
+            out << Indent( THEN_IN ) << lastState << ": begin" << std::endl;
+          }
+          else if( !s->getNode().get().isNOP() )
           {
             if( s->getNode().get().isIfStatement())
             {
               out << Indent( THEN_IN ) << s->getNode().get().C_format(true) << std::endl;
               out << Indent( THEN_OUT) << Variables::nameState() << " <= " << (++lastState) << ";" << std::endl;
-              out << Indent( THEN_OUT) << Variables::nameState() << " <= " << "TODO1 based on nextPart = " << s->helper.nextPart << ";" << std::endl;
+              out << Indent( THEN_OUT) << Variables::nameState() << " <= TODO1 " << m[s->helper.nextPart].begin()->first << ";" << std::endl;
               out << Indent() << "end" << std::endl;
               out << Indent( THEN_IN ) << lastState << ": begin" << std::endl;
             }
@@ -128,7 +143,7 @@ bool Verilog::HLSM( std::ofstream& out, std::string name, Variables& vars, Varia
           }
           else
           {
-            out << Indent() << Variables::nameState() << " <= " << "TODO2 based on nextPart = " << s->helper.nextPart << ";" << std::endl;
+//            out << Indent() << Variables::nameState() << " <= " << "TODO2 based on nextPart = " << s->helper.nextPart << ";" << std::endl;
           }
         }
       }

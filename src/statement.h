@@ -33,15 +33,16 @@ public:
   {
   }
 
-  Statement()
+  Statement( bool Else = false )
       : stmt
-        { .p = nullptr }, mID( NOP )
+        { .p = nullptr }, mID( Else ? ELSE : NOP )
   {
   }
   
   enum ID
   {
     NOP,
+    ELSE,
     ASSIGNMENT,
     IF_STATEMENT,
     FOR_LOOP,
@@ -63,7 +64,7 @@ public:
   {
     RESOURCE_TYPE resource = NONE;
     
-    if( isNOP() )
+    if( isNOP() || isElse() )
     {
       resource = NONE; // just being verbose
     }
@@ -151,6 +152,11 @@ public:
     return NOP == mID;
   }
   
+  bool isElse()
+  {
+    return ELSE == mID;
+  }
+
   std::string C_format(bool nonblocking = false)
   {
     std::string result;
@@ -159,6 +165,9 @@ public:
     {
       case NOP:
         result = "NOP";
+        break;
+      case ELSE:
+        result = "ELSE";
         break;
       case ASSIGNMENT:
         result = stmt.pAssignment->C_format( nonblocking );
@@ -185,6 +194,9 @@ public:
     {
       case NOP:
         out << "NOP";
+        break;
+      case ELSE:
+        out << "ELSE";
         break;
       case ASSIGNMENT:
         out << *s.stmt.pAssignment;
@@ -221,6 +233,10 @@ public:
     if( isNOP() )
     {
       latency = 0;
+    }
+    else if( isElse() )
+    {
+      latency = 1;
     }
     else if( isAssignment() )
     {
@@ -274,9 +290,9 @@ public:
     return *i;
   }
   
-  Statement& addNOP()
+  Statement& addNOP( bool Else=false )
   {
-    return addStatement();
+    return addStatement( Else );
   }
   
   Assignment& addAssignment( Operator& op, Variable& output, Variable& input1, Variable& input2 =
@@ -327,9 +343,9 @@ public:
   }
 
 private:
-  Statement& addStatement()
+  Statement& addStatement( bool Else = false )
   {
-    Statement* pS = new Statement();
+    Statement* pS = new Statement( Else );
     push_back( *pS );
     return *pS;
   }

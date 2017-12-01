@@ -51,7 +51,7 @@ public:
     vertex_t* endNOP = new vertex_t(*(new Statement()) ,0);
     graph.push_back( *topNOP );
     createVertices(stmt,node,partition,topNOP,endNOP);
-    endNOP->helper.partition = partition;
+    endNOP->helper.partition = partition+1;
     graph.push_back(*endNOP);
     return partition;
   }
@@ -94,8 +94,13 @@ public:
         IfStatement& fi = i->if_statement();          // grab the if-statement
         new (to->getNode().get().getStatement())Statement(fi); // 'to' vertex now has the if-statement
         vertex_t* v = to;                             // let's move that to 'v', the new local 'from'
-        to = new vertex_t(*(new Statement()), 0);     // create the new pseudo-endif to get back
+        if( fi.getIfFalse().empty() )
+          to = new vertex_t(*(new Statement()), 0);   // create the new pseudo-endif to get back
+        else
+          to = new vertex_t(*(new Statement(true)), 0);//create the new pseudo-else to get back
 
+        v->addLinkTo(*to);                            // establish dependency links
+        to->addLinkFrom(*v);
                                                       // TODO: weight of conditional, if any
         if( firstStatement)
           v->helper.partition = partition;            // partition number previously incremented to get here
@@ -129,22 +134,23 @@ public:
             from = to; // 'to' needs to become the new 'from', and a new 'to' created
             to = new vertex_t(*(new Statement()), 0);     // create the new end target for either the next partition or caller
             ++partition;
+            // let the if-statment know where to go after the true branch
+            v->helper.nextPart = partition;
           }
-          // let the if-statment know where to go after the true branch
-          v->helper.nextPart = partition;
         }
         else
         {
           // oddball case, won't happen
-          v->helper.nextPart = partition + 1;
         }
 
         // and, create vertices for the false branch in the next partition
         if( !fi.getIfFalse().empty() )
         {
-          createVertices(fi.getIfFalse(), node, ++partition, from, to );
+          // let the if-statment know where to go after the true branch
+          v->helper.nextPart = ++partition;
+          createVertices(fi.getIfFalse(), node, partition, from, to );
           // remember how to get here from the end of the true branch
-          from->helper.nextPart = partition;
+          from->helper.nextPart = partition+1;
 
           // are there more statements to come?
           if( std::next(i) != stmt.end() )
