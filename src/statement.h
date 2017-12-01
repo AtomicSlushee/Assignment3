@@ -320,6 +320,12 @@ public:
   {
   }
   
+  Statement& addStatement( Statement& s )
+  {
+    push_back( s );
+    return s;
+  }
+
 private:
   Statement& addStatement()
   {

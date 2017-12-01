@@ -19,8 +19,7 @@ int main( int argc, char* argv[] )
   Scheduler& scheduler = Singleton< Scheduler >::instance();
   Verilog& verilog = Singleton< Verilog >::instance();
   Statements program;
-  Statements hlsm;
-  Statements schedule;
+  graphType schedule;
 
   if( argc > 3 )
   {
@@ -114,7 +113,7 @@ int main( int argc, char* argv[] )
 #endif
             if( scheduler.process( program, schedule, latency, modelVars ) )
             {
-              if( verilog.HLSM( outFile, "", moduleVars, modelVars, schedule ))
+              if( verilog.HLSM( outFile, "", moduleVars, modelVars, schedule, /*DELETE LATER -->*/graphType::ASAP ))
               {
                 DEBUGOUT( "converted %s to %s with latency %g\n",argv[1],argv[3],latency );
               }

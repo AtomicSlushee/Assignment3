@@ -12,7 +12,7 @@ Scheduler::Scheduler():hlsmTools(Singleton< HLSM >::instance())
 {
 }
 
-bool Scheduler::process(Statements& input, Statements& output, int latencyConstraint, Variables& modelVars)
+bool Scheduler::process(Statements& input, graphType& output, int latencyConstraint, Variables& modelVars)
 {
   graphType g;
   graphType::vertices_t topo;
@@ -24,9 +24,9 @@ bool Scheduler::process(Statements& input, Statements& output, int latencyConstr
   //ALAP(g, latencyConstraint);
   //FDS(g, latencyConstraint);
   
-  //dumpScheduledGraph( g, graphType::ASAP);
+  dumpScheduledGraph( g, graphType::ASAP);
   //dumpScheduledGraph( g, graphType::ALAP);
-  dumpScheduledGraph(g, graphType::FDS);
+  //dumpScheduledGraph(g, graphType::FDS);
   
   hlsmTools.CtoHLSM( g, output, modelVars );
 

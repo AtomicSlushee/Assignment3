@@ -4,6 +4,7 @@
 #include "singleton.h"
 #include "statement.h"
 #include "variable.h"
+#include "graphType.hpp"
 #include <fstream>
 #include <string>
 
@@ -13,7 +14,7 @@ class Verilog
 
 public:
   bool ComponentDatapath( std::ofstream& out, std::string name, Variables& vars, Statements& stmts );
-  bool HLSM( std::ofstream& out, std::string name, Variables& vars, Variables& mvars, Statements& stmts );
+  bool HLSM( std::ofstream& out, std::string name, Variables& vars, Variables& mvars, graphType& stmts, graphType::ScheduleID id );
 
 private:
   Verilog();

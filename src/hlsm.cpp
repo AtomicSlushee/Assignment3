@@ -23,7 +23,7 @@ unsigned HLSM::NextHighestPowerOfTwo(unsigned v)
   return v;
 }
 
-int HLSM::CtoHLSM( graphType& g, Statements& hlsm, Variables& modelVars )
+int HLSM::CtoHLSM( graphType& g, graphType& hlsm, Variables& modelVars )
 {
   int states = 0;
 
@@ -52,6 +52,8 @@ int HLSM::CtoHLSM( graphType& g, Statements& hlsm, Variables& modelVars )
   Variable& state = modelVars.addVariable(Variables::nameState(), type, ioc);
 
   // TODO: walk through the tree and generate the program output
+  // Rough cut: just copy everything and see what happens
+  hlsm = g;
 
   // IN-WORK ------------------------------------------------------------------
 

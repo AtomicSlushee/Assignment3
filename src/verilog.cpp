@@ -8,7 +8,7 @@ Verilog::Verilog()
 std::string Verilog::Indent( INDENT i = CURRENT )
 {
   static std::string in = "  ";
-  auto go = [](int indent){std::string x; while(indent--)x+=in;return x;};
+  auto go = [](int indent){std::string x; if(indent>0)while(indent--)x+=in;return x;};
   switch( i )
   {
     case THEN_IN: return go(mIndent++);
@@ -44,7 +44,7 @@ bool Verilog::ComponentDatapath( std::ofstream& out, std::string name, Variables
   return success;
 }
 
-bool Verilog::HLSM( std::ofstream& out, std::string name, Variables& vars, Variables& mvars, Statements& stmts )
+bool Verilog::HLSM( std::ofstream& out, std::string name, Variables& vars, Variables& mvars, graphType& stmts, graphType::ScheduleID id = graphType::FDS )
 {
   bool success = true;
 
@@ -70,7 +70,36 @@ bool Verilog::HLSM( std::ofstream& out, std::string name, Variables& vars, Varia
   out << Indent( THEN_OUT ) << Variables::nameState() << " <= 0;" << std::endl;
   out << Indent( THEN_IN ) << "else case (" << Variables::nameState() << ")" << std::endl;
 
+  // the zero state is a freebie, but the last part gets filled in by the loop below
+  out << Indent( THEN_IN ) << "0: begin" << std::endl;
+  out << Indent() << builtIn::done.name() << " <= 0;" << std::endl;
+  out << Indent( THEN_IN ) << "if (" << builtIn::start.name() << " == 1)" << std::endl;
+
   //TODO - body using the statements passed in
+  int lastState = 0;
+  for( auto s = stmts.getGraph().begin(); s != stmts.getGraph().end(); s++ )
+  {
+    if( lastState != s->get().helper.schedTime[id])
+    {
+      lastState = s->get().helper.schedTime[id];
+      out << Indent( THEN_OUT ) << Variables::nameState() << " <= " << lastState << ";" << std::endl;
+      if( 1 == lastState ) Indent(OUT);
+      out << Indent() << "end" << std::endl;
+      out << Indent( THEN_IN ) << lastState << ": begin" << std::endl;
+    }
+    if( s == std::prev(stmts.getGraph().end()) )
+    {
+      // last state/statement
+      out << Indent() << builtIn::done.name() << " <= 1;" << std::endl;
+      out << Indent( THEN_OUT ) << Variables::nameState() << " <= 0;" << std::endl;
+      out << Indent() << "end" << std::endl;
+    }
+    else
+    {
+      if( !s->get().getNode().get().isNOP() )
+        out << Indent() << s->get().getNode().get().C_format(true) << ";" << std::endl;
+    }
+  }
 
   out << Indent( OUT_THEN ) << "endcase" << std::endl;
   out << Indent( OUT_THEN ) << "end" << std::endl;
