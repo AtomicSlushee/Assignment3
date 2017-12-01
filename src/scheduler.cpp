@@ -381,7 +381,7 @@ void Scheduler::dumpScheduledGraph(graphType& g, graphType::ScheduleID s)
   {
     for( auto j = i->second.begin(); j != i->second.end(); j++)
     {
-      for( vertList_t::iterator k = j->second.begin(); k != j->second.end(); k++ )
+      for( auto k = j->second.begin(); k != j->second.end(); k++ )
       {
         graphType::vertex_t* p = *k;
         std::cout << "[" << i->first << "][" << j->first << "] " << p->getNode().get().C_format() << std::endl;

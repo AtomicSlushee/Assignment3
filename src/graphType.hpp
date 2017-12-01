@@ -20,7 +20,8 @@ private:
     double weight[numWeights];
     int partition;
     int schedTime[numSchedules];
-    Helper():color(BLACK),dist(0.0),weight{1.0,0.0},partition(0),schedTime(){}
+    int nextPart; // used only by if-statements
+    Helper():color(BLACK),dist(0.0),weight{1.0,0.0},partition(0),schedTime(),nextPart(0){}
   };
 
 public:
@@ -129,12 +130,21 @@ public:
             to = new vertex_t(*(new Statement()), 0);     // create the new end target for either the next partition or caller
             ++partition;
           }
+          // let the if-statment know where to go after the true branch
+          v->helper.nextPart = partition;
+        }
+        else
+        {
+          // oddball case, won't happen
+          v->helper.nextPart = partition + 1;
         }
 
         // and, create vertices for the false branch in the next partition
         if( !fi.getIfFalse().empty() )
         {
           createVertices(fi.getIfFalse(), node, ++partition, from, to );
+          // remember how to get here from the end of the true branch
+          from->helper.nextPart = partition;
 
           // are there more statements to come?
           if( std::next(i) != stmt.end() )

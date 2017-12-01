@@ -1,5 +1,6 @@
 #include "verilog.h"
 #include "parser.h"
+#include "scheduler.h"
 
 Verilog::Verilog()
 {
@@ -47,7 +48,13 @@ bool Verilog::ComponentDatapath( std::ofstream& out, std::string name, Variables
 bool Verilog::HLSM( std::ofstream& out, std::string name, Variables& vars, Variables& mvars, graphType& stmts, graphType::ScheduleID id = graphType::FDS )
 {
   bool success = true;
+  Scheduler& scheduler = Singleton< Scheduler >::instance();
+  Scheduler::partitionMap_t m;
 
+  // build the scheduling map
+  scheduler.buildPartTimeMap(m, stmts, id);
+
+  // start with the various module declarations
   setIndent( 0 );
   DeclareModule( out,"HLSM",vars );
   Indent( IN );
@@ -75,29 +82,56 @@ bool Verilog::HLSM( std::ofstream& out, std::string name, Variables& vars, Varia
   out << Indent() << builtIn::done.name() << " <= 0;" << std::endl;
   out << Indent( THEN_IN ) << "if (" << builtIn::start.name() << " == 1)" << std::endl;
 
-  //TODO - body using the statements passed in
+  // need to recognize the last statement
+  auto lastStmt = std::prev(std::prev(std::prev(m.end())->second.end())->second.end());
+
+  // body using the map of statements passed in
   int lastState = 0;
-  for( auto s = stmts.getGraph().begin(); s != stmts.getGraph().end(); s++ )
+  for( auto i = m.begin(); i != m.end(); i++)
   {
-    if( lastState != s->get().helper.schedTime[id])
+    for( auto j = i->second.begin(); j != i->second.end(); j++)
     {
-      lastState = s->get().helper.schedTime[id];
-      out << Indent( THEN_OUT ) << Variables::nameState() << " <= " << lastState << ";" << std::endl;
-      if( 1 == lastState ) Indent(OUT);
-      out << Indent() << "end" << std::endl;
-      out << Indent( THEN_IN ) << lastState << ": begin" << std::endl;
-    }
-    if( s == std::prev(stmts.getGraph().end()) )
-    {
-      // last state/statement
-      out << Indent() << builtIn::done.name() << " <= 1;" << std::endl;
-      out << Indent( THEN_OUT ) << Variables::nameState() << " <= 0;" << std::endl;
-      out << Indent() << "end" << std::endl;
-    }
-    else
-    {
-      if( !s->get().getNode().get().isNOP() )
-        out << Indent() << s->get().getNode().get().C_format(true) << ";" << std::endl;
+      for( auto k = j->second.begin(); k != j->second.end(); k++ )
+      {
+        graphType::vertex_t* s = *k;
+        if( lastState != s->helper.schedTime[id])
+        {
+          lastState = s->helper.schedTime[id];
+          out << Indent( THEN_OUT ) << Variables::nameState() << " <= " << lastState << ";" << std::endl;
+          if( 1 == lastState ) Indent(OUT);
+          out << Indent() << "end" << std::endl;
+          out << Indent( THEN_IN ) << lastState << ": begin" << std::endl;
+        }
+        if( k == lastStmt )
+        {
+          // last state/statement
+          out << Indent() << builtIn::done.name() << " <= 1;" << std::endl;
+          out << Indent( THEN_OUT ) << Variables::nameState() << " <= 0;" << std::endl;
+          out << Indent() << "end" << std::endl;
+        }
+        else
+        {
+          if( !s->getNode().get().isNOP() )
+          {
+            if( s->getNode().get().isIfStatement())
+            {
+              out << Indent( THEN_IN ) << s->getNode().get().C_format(true) << std::endl;
+              out << Indent( THEN_OUT) << Variables::nameState() << " <= " << (++lastState) << ";" << std::endl;
+              out << Indent( THEN_OUT) << Variables::nameState() << " <= " << "TODO1 based on nextPart = " << s->helper.nextPart << ";" << std::endl;
+              out << Indent() << "end" << std::endl;
+              out << Indent( THEN_IN ) << lastState << ": begin" << std::endl;
+            }
+            else
+            {
+              out << Indent() << s->getNode().get().C_format(true) << ";" << std::endl;
+            }
+          }
+          else
+          {
+            out << Indent() << Variables::nameState() << " <= " << "TODO2 based on nextPart = " << s->helper.nextPart << ";" << std::endl;
+          }
+        }
+      }
     }
   }
 
