@@ -20,9 +20,9 @@ bool Scheduler::process(Statements& input, graphType& output, int latencyConstra
   g.createWeightedGraph( input );
   g.topologicalSort(topo);
   double lp = g.longestPath(topo, graphType::SCHEDULING);
-  ASAP(g);
+  //ASAP(g);
   //ALAP(g, latencyConstraint);
-  //FDS(g, latencyConstraint);
+  FDS(g, latencyConstraint);
   
   dumpScheduledGraph( g, graphType::ASAP);
   //dumpScheduledGraph( g, graphType::ALAP);
@@ -302,25 +302,28 @@ void Scheduler::FDS(graphType& g, int latencyConstraint)
         // could think of a better way to do this.
         if (v->get().getNode().get().getResource() == Statement::ADDER_SUB)
         {
-          selfForce = 0.0;
-          for (int j = 1; j <= latencyConstraint; j++)
+          
+          for (timestep = 1; timestep <= latencyConstraint; timestep++)
           {
-            float temp = 0.0;
+            
+            selfForce = 0.0;
             for (int k = 1; k <= latencyConstraint; k++)
             {
               float opProbabilty = 0.0;
               float typeDist = 0.0;
-              bool isUnity = (j==k);
-              opProbabilty =v->get().opProb[j];
-              typeDist = ad[j-1];// todo shouldn't need to do j-1 for resource stuff
+              float temp = 0.0;
+              bool isUnity = (timestep==k);
+              opProbabilty =v->get().opProb[k-1];
+              typeDist = ad[k-1];// todo shouldn't need to do j-1 for resource stuff
               
-              temp = opProbabilty*(isUnity - typeDist);
+              temp = typeDist*(isUnity - opProbabilty);
               //temp = v->get().opProb[j]*((j==k) - ad[j - 1]);
               selfForce += temp;
+              std::cout << typeDist << "("<<isUnity<<"-"<<opProbabilty<<") = " << temp<<std::endl;
             }
             // todo better name than j
             
-            std::cout << "Self force for node " << v->get().getNodeNumber() << " at timestep " << j << " is " << temp << std::endl;
+            std::cout << "Self force for node " << v->get().getNodeNumber() << " at timestep " << timestep << " is " << selfForce << std::endl;
             //std::cout << "opProb[" <<j<<"] = " <<v->get().opProb[j] << std::endl;
             //std::cout << ad[j - 1];
             
@@ -328,7 +331,7 @@ void Scheduler::FDS(graphType& g, int latencyConstraint)
 
           
           std::cout << "Total Self force is " << selfForce<<std::endl;
-        v->get().selfForce.push_back(selfForce);
+          v->get().selfForce.push_back(selfForce);// todo why is self force a list and not just a number?
       }
       
     }
