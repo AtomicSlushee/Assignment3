@@ -301,24 +301,21 @@ void Scheduler::FDS(graphType& g, int latencyConstraint)
       // could think of a better way to do this.
       if (v->get().getNode().get().getResource() == Statement::ADDER_SUB)
       {
-        for (timestep = 1; timestep <= latencyConstraint; timestep++)
+        for (timestep = v->get().timeFrame[0]; timestep <= v->get().timeFrame[1]; timestep++)
         {
           selfForce = 0.0;
-          for (int k = 1; k <= latencyConstraint; k++)
+          for (int k = v->get().timeFrame[0]; k <= v->get().timeFrame[1]; k++)
           {
-            if (timestep >= v->get().timeFrame[0] && timestep <= v->get().timeFrame[1])
-            {
-              
-              float opProbabilty = 0.0;
-              float typeDist = 0.0;
-              float temp = 0.0;
-              bool isUnity = (timestep==k);
-              opProbabilty =v->get().opProb[k-1];
-              typeDist = ad[k-1];// todo shouldn't need to do j-1 for resource stuff
-              temp = typeDist*(isUnity - opProbabilty);
-              selfForce += temp;
+            float opProbabilty = 0.0;
+            float typeDist = 0.0;
+            float temp = 0.0;
+            bool isUnity = (timestep==k);
+            opProbabilty =v->get().opProb[k-1];
+            typeDist = ad[k-1];// todo shouldn't need to do j-1 for resource stuff
+            temp = typeDist*(isUnity - opProbabilty);
+            selfForce += temp;
               //std::cout << typeDist << "("<<isUnity<<"-"<<opProbabilty<<") = " << temp<<std::endl;
-            }
+            
             
           }
           //std::cout << "Self force for node " << v->get().getNodeNumber() << " at timestep " << timestep << " is " << selfForce << std::endl;
@@ -331,13 +328,34 @@ void Scheduler::FDS(graphType& g, int latencyConstraint)
     // now do the pred succ forces for each timestep and record the total force for each time step
     for( auto v = g.getGraph().begin(); v != g.getGraph().end(); v++)
     {
-      for (timestep = 1; timestep <= latencyConstraint; timestep++)
+      for (timestep = v->get().timeFrame[0]; timestep <= v->get().timeFrame[1]; timestep++)
       {
-        // only REALLY concerned with times in our window.
-        if (timestep >= v->get().timeFrame[0] && timestep <= v->get().timeFrame[1])
-        {
-          
-        }
+        
+          // Sooooooo we have to check if we have any successors or predecessors
+          // That's our first todo
+          if( v->get().getLinksFrom().empty() )
+          {
+            // no predecessor or successors so total force is just self force
+            // TODO NOP DOESN"T LIKE THIS
+            // probably because it doesn't have any self force...
+            // which is becuase it doesn't have a resource...
+            // That's on the todo list.
+            // TODO once the above is fixed, the below if statement can go away
+            if (v->get().selfForce.size() >= timestep)
+            {
+              
+              v->get().TotalForce.push_back(v->get().selfForce[timestep]);
+            }
+            
+          }
+          else
+          {
+            //we have to deal with predsuc forces
+            
+            
+          }
+
+        
       }
     }
     
