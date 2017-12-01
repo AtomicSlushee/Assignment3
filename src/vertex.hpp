@@ -15,9 +15,10 @@ template< class NODETYPE, class IOTYPE, class HELPER >
 
       // just something quick here:
       // need a list of probabilities
-    //std::list<float> opProb;
+
     std::vector<float> opProb;
-    std::list<float> selfForce;
+    std::vector<float> TotalForce;
+    std::vector<float> selfForce;
     float timeFrame[2] = {0};
     
 

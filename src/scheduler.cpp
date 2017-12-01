@@ -234,7 +234,7 @@ void Scheduler::FDS(graphType& g, int latencyConstraint)
         {
           v->get().opProb.push_back(0.0);
         }
-        v->get().selfForce.push_back(0.0); // need a list that is the same size and starts with all 0.0s
+        
         
       }
       std::cout << "Operational Probabilities [cycle][probability]" << std::endl;
@@ -296,46 +296,51 @@ void Scheduler::FDS(graphType& g, int latencyConstraint)
     for( auto v = g.getGraph().begin(); v != g.getGraph().end(); v++)
     {
       // from the look of it, compute a self force for each time step
-
-        float selfForce = 0.0;
-        // damn, have to do it this way again? if only I had started earlier I
-        // could think of a better way to do this.
-        if (v->get().getNode().get().getResource() == Statement::ADDER_SUB)
+      float selfForce = 0.0;
+      // damn, have to do it this way again? if only I had started earlier I
+      // could think of a better way to do this.
+      if (v->get().getNode().get().getResource() == Statement::ADDER_SUB)
+      {
+        for (timestep = 1; timestep <= latencyConstraint; timestep++)
         {
-          
-          for (timestep = 1; timestep <= latencyConstraint; timestep++)
+          selfForce = 0.0;
+          for (int k = 1; k <= latencyConstraint; k++)
           {
-            
-            selfForce = 0.0;
-            for (int k = 1; k <= latencyConstraint; k++)
+            if (timestep >= v->get().timeFrame[0] && timestep <= v->get().timeFrame[1])
             {
+              
               float opProbabilty = 0.0;
               float typeDist = 0.0;
               float temp = 0.0;
               bool isUnity = (timestep==k);
               opProbabilty =v->get().opProb[k-1];
               typeDist = ad[k-1];// todo shouldn't need to do j-1 for resource stuff
-              
               temp = typeDist*(isUnity - opProbabilty);
-              //temp = v->get().opProb[j]*((j==k) - ad[j - 1]);
               selfForce += temp;
-              std::cout << typeDist << "("<<isUnity<<"-"<<opProbabilty<<") = " << temp<<std::endl;
+              //std::cout << typeDist << "("<<isUnity<<"-"<<opProbabilty<<") = " << temp<<std::endl;
             }
-            // todo better name than j
-            
-            std::cout << "Self force for node " << v->get().getNodeNumber() << " at timestep " << timestep << " is " << selfForce << std::endl;
-            //std::cout << "opProb[" <<j<<"] = " <<v->get().opProb[j] << std::endl;
-            //std::cout << ad[j - 1];
             
           }
-
-          
-          std::cout << "Total Self force is " << selfForce<<std::endl;
-          v->get().selfForce.push_back(selfForce);// todo why is self force a list and not just a number?
+          //std::cout << "Self force for node " << v->get().getNodeNumber() << " at timestep " << timestep << " is " << selfForce << std::endl;
+          v->get().selfForce.push_back(selfForce);
+        }
+        
+        
       }
-      
+    }// for each node in graph do the self force
+    // now do the pred succ forces for each timestep and record the total force for each time step
+    for( auto v = g.getGraph().begin(); v != g.getGraph().end(); v++)
+    {
+      for (timestep = 1; timestep <= latencyConstraint; timestep++)
+      {
+        // only REALLY concerned with times in our window.
+        if (timestep >= v->get().timeFrame[0] && timestep <= v->get().timeFrame[1])
+        {
+          
+        }
+      }
     }
-
+    
   }
 }
 
