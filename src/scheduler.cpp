@@ -1,3 +1,4 @@
+#include "hlsyn.h"
 #include "scheduler.h"
 #include "graphType.hpp"
 #include "operator.h"
@@ -12,23 +13,35 @@ Scheduler::Scheduler():hlsmTools(Singleton< HLSM >::instance())
 {
 }
 
-bool Scheduler::process(Statements& input, graphType& output, int latencyConstraint, Variables& modelVars)
+bool Scheduler::process(Statements& input, graphType& output, int latencyConstraint, Variables& modelVars, graphType::ScheduleID id)
 {
   graphType g;
   graphType::vertices_t topo;
 
   g.createWeightedGraph( input );
   g.topologicalSort(topo);
-  double lp = g.longestPath(topo, graphType::SCHEDULING);
-  ASAP(g);
-//  ALAP(g, latencyConstraint);
-//  FDS(g, latencyConstraint);
   
-  dumpScheduledGraph( g, graphType::ASAP);
-  //dumpScheduledGraph( g, graphType::ALAP);
-  //dumpScheduledGraph(g, graphType::FDS);
+//  double lp = g.longestPath(topo, graphType::SCHEDULING);
+
+  if( id != graphType::ALAP)
+  {
+    ASAP(g);
+    if( DEBUG_ENABLED ) dumpScheduledGraph( g, graphType::ASAP);
+  }
+
+  if( id != graphType::ASAP)
+  {
+    ALAP(g, latencyConstraint);
+    if( DEBUG_ENABLED ) dumpScheduledGraph( g, graphType::ALAP);
+  }
+
+  if( id == graphType::FDS)
+  {
+    FDS(g, latencyConstraint);
+    if( DEBUG_ENABLED ) dumpScheduledGraph(g, graphType::FDS);
+  }
   
-  hlsmTools.CtoHLSM( g, output, modelVars );
+  hlsmTools.CtoHLSM( g, output, modelVars, id );
 
   return true;
 }

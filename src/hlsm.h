@@ -10,7 +10,8 @@ class HLSM
   friend class Singleton<HLSM>;
 public:
   unsigned NextHighestPowerOfTwo(unsigned v);
-  int CtoHLSM( graphType& g, graphType& hlsm, Variables& modelVars );
+  unsigned BitsToRepresent(unsigned v);
+  int CtoHLSM( graphType& g, graphType& hlsm, Variables& modelVars, graphType::ScheduleID id );
 private:
   HLSM();
 };

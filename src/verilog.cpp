@@ -121,7 +121,7 @@ bool Verilog::HLSM( std::ofstream& out, std::string name, Variables& vars, Varia
         {
           if( s->getNode().get().isElse() )
           {
-            out << Indent( THEN_OUT ) << Variables::nameState() << " <= TODO3 " << m[s->helper.nextPart].begin()->first << ";" << std::endl;
+            out << Indent( THEN_OUT ) << Variables::nameState() << " <= " << m[s->helper.nextPart].begin()->first << ";" << std::endl;
             out << Indent() << "end" << std::endl;
             lastState++;
             out << Indent( THEN_IN ) << lastState << ": begin" << std::endl;
@@ -132,7 +132,7 @@ bool Verilog::HLSM( std::ofstream& out, std::string name, Variables& vars, Varia
             {
               out << Indent( THEN_IN ) << s->getNode().get().C_format(true) << std::endl;
               out << Indent( THEN_OUT) << Variables::nameState() << " <= " << (++lastState) << ";" << std::endl;
-              out << Indent( THEN_OUT) << Variables::nameState() << " <= TODO1 " << m[s->helper.nextPart].begin()->first << ";" << std::endl;
+              out << Indent( THEN_OUT) << Variables::nameState() << " <= " << m[s->helper.nextPart].begin()->first << ";" << std::endl;
               out << Indent() << "end" << std::endl;
               out << Indent( THEN_IN ) << lastState << ": begin" << std::endl;
             }
@@ -143,7 +143,7 @@ bool Verilog::HLSM( std::ofstream& out, std::string name, Variables& vars, Varia
           }
           else
           {
-//            out << Indent() << Variables::nameState() << " <= " << "TODO2 based on nextPart = " << s->helper.nextPart << ";" << std::endl;
+            // nothing to do for these particular NOPs
           }
         }
       }

@@ -137,6 +137,10 @@ public:
             // let the if-statment know where to go after the true branch
             v->helper.nextPart = partition;
           }
+          else
+          { // special case: no else, and nothing more to come
+            v->helper.nextPart = partition + 1;
+          }
         }
         else
         {
@@ -297,6 +301,12 @@ public:
         return v;
     }
     return graph.end();
+  }
+
+  std::string nameScheduleID( ScheduleID id )
+  {
+    static std::string idName[numSchedules] = { "ASAP", "ALAP", "FDS" };
+    return idName[id];
   }
 
 private:

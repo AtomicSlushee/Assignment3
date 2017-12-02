@@ -23,12 +23,17 @@ unsigned HLSM::NextHighestPowerOfTwo(unsigned v)
   return v;
 }
 
-int HLSM::CtoHLSM( graphType& g, graphType& hlsm, Variables& modelVars )
+// from Bit Twiddling Hacks at
+// https://graphics.stanford.edu/~seander/bithacks.html#IntegerLogObvious
+unsigned HLSM::BitsToRepresent( unsigned v )
 {
-  int states = 0;
+  unsigned r = 0;
+  while( v >>= 1) r++;
+  return r;
+}
 
-  // IN-WORK ------------------------------------------------------------------
-
+int HLSM::CtoHLSM( graphType& g, graphType& hlsm, Variables& modelVars, graphType::ScheduleID id )
+{
   // gain access to the master classes
   Scheduler& scheduler = Singleton<Scheduler>::instance();
   Types& types = Singleton<Types>::instance();
@@ -37,26 +42,21 @@ int HLSM::CtoHLSM( graphType& g, graphType& hlsm, Variables& modelVars )
   // declare a map
   Scheduler::partitionMap_t m;
   // build a map from which we'll generate the HLSM
-  scheduler.buildPartTimeMap( m, g, graphType::ASAP );
+  scheduler.buildPartTimeMap( m, g, id );
 
-  // TODO: gotta figureout how to get number of states and such;
-  //       for now, just use max time slot as a placeholder
-  int numStates = std::prev(std::prev(m.end())->second.end())->first + 2;
+  // max time slot is last state; add one
+  int numStates = std::prev(std::prev(m.end())->second.end())->first + 1;
 
   // add the state variable, with just enough bits
-  int width = NextHighestPowerOfTwo( numStates );
+  int width = BitsToRepresent( NextHighestPowerOfTwo( numStates ));
   std::string stype = "UInt" + std::to_string(width);
   if( !types.isType(stype)) types.addType( false, width );
   Type& type = types.getType(stype);
   IOClass& ioc = ios.getIOClass("variable");
-  Variable& state = modelVars.addVariable(Variables::nameState(), type, ioc);
+  /*Variable& state = */modelVars.addVariable(Variables::nameState(), type, ioc);
 
-  // TODO: walk through the tree and generate the program output
-  // Rough cut: just copy everything and see what happens
+  // Turns out the tree is sufficient, and needs no additional processing.
   hlsm = g;
 
-  // IN-WORK ------------------------------------------------------------------
-
-  /*HACK*/ return 1; /*HACK*/
-  return states;
+  return numStates;
 }
