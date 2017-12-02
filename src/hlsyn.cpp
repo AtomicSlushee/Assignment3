@@ -21,6 +21,12 @@ int main( int argc, char* argv[] )
   Statements program;
   graphType schedule;
 
+  // this code relies on the memory space of the variables not changing;
+  // therefore, let's ensure there's enough room up front, to avoid a
+  // resize and reallocation
+  moduleVars.reserve(100);
+  modelVars.reserve(100);
+
   if( argc > 3 )
   {
     graphType::ScheduleID sid = graphType::FDS;
