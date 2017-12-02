@@ -305,7 +305,7 @@ public:
     return *pA;
   }
   
-  IfStatement& addIfStatement( Variable& condition )
+  IfStatement& addIfStatement( Condition& condition )
   {
     Statements* pT = new Statements;
     Statements* pF = new Statements;

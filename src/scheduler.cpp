@@ -53,12 +53,12 @@ bool Scheduler::process( Statements& input, graphType& output, int latencyConstr
       dumpScheduledGraph( g,graphType::ALAP );
   }
 
-//  if( id == graphType::FDS )
-//  {
+  if( id == graphType::FDS )
+  {
     FDS( g,latencyConstraint );
     if( DEBUG_ENABLED )
       dumpScheduledGraph( g,graphType::FDS );
-  //}
+  }
 
   hlsmTools.CtoHLSM( g,output,modelVars,id );
 

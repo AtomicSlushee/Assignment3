@@ -1,7 +1,7 @@
 #ifndef __if_h__
 #define __if_h__
 
-#include "variable.h"
+#include "condition.h"
 #include <string>
 
 class Statements;
@@ -10,17 +10,17 @@ class IfStatement
 {
 public:
   // constructor
-  IfStatement( Variable& condition, Statements* ifTrue, Statements* ifFalse )
+  IfStatement( Condition& condition, Statements* ifTrue, Statements* ifFalse )
   : mCondition( condition )
   , mIfTrue(ifTrue)
   , mIfFalse(ifFalse)
   {
     // determine operator width
-    mWidth = condition.width();
+    mWidth = 0; //TODO
   }
 
   // get the condition argument
-  Variable& getCondition()
+  Condition& getCondition()
   {
     return mCondition;
   }
@@ -38,21 +38,20 @@ public:
   std::string C_format()
   {
     std::string out;
-    out = "if ( " + mCondition.name() + " )";
+    out = "if ( " + mCondition.C_format() + " )";
     return out;
   }
 
   // stream override to output the statement in Verilog
   friend std::ostream& operator<<( std::ostream& out, IfStatement& a )
   {
-    out << "IF STATEMENT IS TODO"; //TODO
-    /*DEBUG*/out << " // " << a.C_format();
+    out << " // " << a.C_format();
     return out;
   }
 
 private:
   int mWidth;
-  Variable& mCondition;
+  Condition& mCondition;
   Statements* mIfTrue;
   Statements* mIfFalse;
 };

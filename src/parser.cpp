@@ -140,7 +140,7 @@ bool Parser::processMore( Variables& vars, Statements& stmts, Tokenizer& tokens,
               {
                 if (vars.isVariable(cond))
                 {
-                  IfStatement& if_ = stmts.addIfStatement(vars.getVariable(cond));
+                  IfStatement& if_ = stmts.addIfStatement(*new Condition(vars.getVariable(cond)));
                   DEBUGOUT( "begin if-statement on condition %s\n",cond.c_str());
                   if (processMore(vars, if_.getIfTrue(),tokens,Keyword::CLOSE_BRACE))
                   {

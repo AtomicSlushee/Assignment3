@@ -3,6 +3,7 @@
 
 #include "statement.h"
 #include "vertex.hpp"
+#include "condition.h"
 #include <new>
 #include <functional>
 
@@ -78,7 +79,7 @@ public:
         {
           v.addInput(a.getInput(n));
         }
-        v.addLinkFrom(*from);                          // top level linkage for scheduling
+        v.addLinkFrom(*from);                         // top level linkage for scheduling
         from->addLinkTo(v);
         v.addLinkTo(*to);
         to->addLinkFrom(v);
@@ -107,9 +108,14 @@ public:
         else
           v->helper.partition = ++partition;          // give it the next partition number (by itself)
         graph.push_back(*v);                          // add vertex to graph
-        Variable& condition = fi.getCondition();      // add the condition variable...
-        v->addOutput(condition);                      // ...as an output
-        v->addInput(condition);                       // ...and an input
+        Condition& condition = fi.getCondition();     // add the condition variable...
+        v->addOutput(condition.getLeft());            // ...as an output
+        v->addInput(condition.getLeft());             // ...and an input
+        if( condition.getLogic().id() != Operator::NOP )
+        { // if condition with more than one variable (from for-loop)
+          v->addOutput(condition.getRight());         // ...as an output
+          v->addInput(condition.getRight());          // ...and an input
+        }
 
         // to keep things chained properly
         from = v;
@@ -170,6 +176,7 @@ public:
       else if( i->isForLoop() )
       {
         //TODO: need to handle for-loops, and unroll four times for FDS
+        std::cout << std::endl << i->C_format() << std::endl;
       }
       else
       {
