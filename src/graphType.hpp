@@ -121,6 +121,9 @@ public:
             graph.push_back(*to); // save the 'to' node in the graph
             from = to; // need to move 'to' to 'from' and create a new 'to' the keep the chain going
             to = new vertex_t(*(new Statement()), 0);     // create the new end target for either the next partition or caller
+            // link the new from-to pair
+            from->addLinkTo(*to);
+            to->addLinkFrom(*from);
           }
           // if not a false, are there more statements to come?
           else if( std::next(i) != stmt.end() )
@@ -163,6 +166,10 @@ public:
             graph.push_back(*to); // save the 'to' node in the graph
             from = to; // 'to' needs to become the new 'from', and a new 'to' created
             to = new vertex_t(*(new Statement()), 0);     // create the new end target for either the next partition or caller
+            // link the new from-to pair
+            from->addLinkTo(*to);
+            to->addLinkFrom(*from);
+            // next partition
             ++partition;
           }
         }
