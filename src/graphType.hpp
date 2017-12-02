@@ -14,6 +14,7 @@ public:
   enum WeightID {UNITY=0,LATENCY,SCHEDULING,numWeights};
   enum ScheduleID {ASAP=0,ALAP,FDS,numSchedules};
 private:
+  static const int UnrollCount = 4;
   struct Helper
   {
     HelperID color;
@@ -68,21 +69,7 @@ public:
       // if this statement is an assignment
       if( i->isAssignment() )
       {
-        Assignment& a = i->assignment();              // grab the assignment
-        vertex_t& v = *(new vertex_t(*i,node++));     // create a new vertex for it
-        v.helper.weight[LATENCY] = a.getLatency();    // set the weight based on latency
-        v.helper.weight[SCHEDULING] = i->scheduleLatency();
-        v.helper.partition = partition;               // give it the current partition number
-        graph.push_back(v);                           // add vertex to graph
-        v.addOutput(a.getResult());                   // add assignment output to vertex output list
-        for( int n = 0; n < a.getNumArgs(); n++ )     // add assignment inputs to vertex input list
-        {
-          v.addInput(a.getInput(n));
-        }
-        v.addLinkFrom(*from);                         // top level linkage for scheduling
-        from->addLinkTo(v);
-        v.addLinkTo(*to);
-        to->addLinkFrom(v);
+        doAssignment( i, node, partition, from, to );
       }
       // if this statement is an if-statement
       else if( i->isIfStatement() )
@@ -175,14 +162,73 @@ public:
       }
       else if( i->isForLoop() )
       {
-        //TODO: need to handle for-loops, and unroll four times for FDS
-        std::cout << std::endl << i->C_format() << std::endl;
+        // grab the initialize statement from the for loop...
+        Statements::iterator ii = i->for_loop().getInitial().begin();
+        // and add it to the graph as an assignment
+        doAssignment( ii, node, partition, from, to );
+        // now create a new Statements type, which will hold a single if-statement
+        Statements& u = *new Statements();
+        // now recurse to create the unrolled for-loop
+        recurseForLoop( i, u, UnrollCount );
+        // finally we need to call ourselves with the new if-statement
+        partition++;
+        createVertices( u, node, partition, from, to );
       }
       else
       {
         throw; // shouldn't get here
       }
       firstStatement = false;
+    }
+  }
+
+  void doAssignment( Statements::iterator& i, int& node, int partition, vertex_t* from, vertex_t* to )
+  {
+    Assignment& a = i->assignment();              // grab the assignment
+    vertex_t& v = *(new vertex_t(*i,node++));     // create a new vertex for it
+    v.helper.weight[LATENCY] = a.getLatency();    // set the weight based on latency
+    v.helper.weight[SCHEDULING] = i->scheduleLatency();
+    v.helper.partition = partition;               // give it the current partition number
+    graph.push_back(v);                           // add vertex to graph
+    v.addOutput(a.getResult());                   // add assignment output to vertex output list
+    for( int n = 0; n < a.getNumArgs(); n++ )     // add assignment inputs to vertex input list
+    {
+      v.addInput(a.getInput(n));
+    }
+    // MUX2x1 is a special case: we must treat the "x : y" as outputs, too
+    if( a.getOperator().id() == Operator::MUX2x1 )
+    {
+      v.addOutput( a.getInput2() );
+      v.addOutput( a.getInput3() );
+    }
+    v.addLinkFrom(*from);                         // top level linkage for scheduling
+    from->addLinkTo(v);
+    v.addLinkTo(*to);
+    to->addLinkFrom(v);
+  }
+
+  void recurseForLoop( Statements::iterator& i, Statements& u, int level)
+  {
+    if( level-- )
+    {
+      // grab the conditional from the original for-loop
+      Condition& c = i->for_loop().getCondition().begin()->condition();
+      // add it to the given body as an if-statement
+      IfStatement& fi = u.addIfStatement( c );
+      // grab a reference to the true-branch of our if-statement
+      Statements& ii = fi.getIfTrue();
+      // grab the body from the original for-loop
+      Statements& b = i->for_loop().getBody();
+      // add the body statements to the true-branch of the if-statement
+      for( auto x = b.begin(); x != b.end(); x++)
+      {
+        ii.addStatement(*x->getStatement());
+      }
+      // add the increment from the original for-loop to the true-branch
+      Statement& inc = *(i->for_loop().getUpdate().begin()->getStatement());
+      ii.addStatement( inc );
+      // now recurse until done
+      recurseForLoop( i, ii, level );
     }
   }
 
