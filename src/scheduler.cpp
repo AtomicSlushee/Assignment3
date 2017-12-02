@@ -10,21 +10,21 @@
 #include <vector>
 
 Scheduler::Scheduler()
-    : hlsmTools( Singleton< HLSM >::instance() )
+: hlsmTools( Singleton< HLSM >::instance() )
 {
 }
 
 bool Scheduler::process( Statements& input, graphType& output, int latencyConstraint, Variables& modelVars,
-                         graphType::ScheduleID id )
+                        graphType::ScheduleID id )
 {
   graphType g;
   graphType::vertices_t topo;
-
+  
   g.createWeightedGraph( input );
   g.topologicalSort( topo );
-
-//  double lp = g.longestPath(topo, graphType::SCHEDULING);
-
+  
+  //  double lp = g.longestPath(topo, graphType::SCHEDULING);
+  
   // always do ASAP
   if( true )
   {
@@ -32,7 +32,7 @@ bool Scheduler::process( Statements& input, graphType& output, int latencyConstr
     if( DEBUG_ENABLED )
       dumpScheduledGraph( g,graphType::ASAP );
   }
-
+  
   if( id > graphType::ASAP )
   {
     // check states in ASAP against given latency
@@ -45,23 +45,23 @@ bool Scheduler::process( Statements& input, graphType& output, int latencyConstr
       latencyConstraint = maxTimeSlot-1;
     }
   }
-
+  
   if( id != graphType::ASAP )
   {
     ALAP( g,latencyConstraint );
     if( DEBUG_ENABLED )
       dumpScheduledGraph( g,graphType::ALAP );
   }
-
+  
   if( id == graphType::FDS )
   {
     FDS( g,latencyConstraint );
     if( DEBUG_ENABLED )
       dumpScheduledGraph( g,graphType::FDS );
   }
-
+  
   hlsmTools.CtoHLSM( g,output,modelVars,id );
-
+  
   return true;
 }
 
@@ -72,7 +72,7 @@ void Scheduler::ASAP( graphType& g )
   {
     v->get().helper.schedTime[graphType::ASAP] = NOT_SCHEDULED;
   }
-
+  
   // keep cycling until all nodes scheduled
   while( true )
   {
@@ -82,15 +82,15 @@ void Scheduler::ASAP( graphType& g )
       // if this node has already been scheduled, skip it
       if( v->get().helper.schedTime[graphType::ASAP] > NOT_SCHEDULED )
         continue;
-
+      
       done = false; // nope, still scheduling
-
+      
       // does this node have any predecessors at all?
       if( v->get().getLinksFrom().empty() )
       {
         v->get().helper.schedTime[graphType::ASAP] = 1; // no, schedule in the first round
       }
-
+      
       else
       {
         // check to see if all predecessors scheduled, and while you're at it,
@@ -140,15 +140,15 @@ void Scheduler::ALAP( graphType& g, int latencyConstraint )
     v->get().helper.schedTime[graphType::ALAP] = NOT_SCHEDULED;
     v->get().helper.color = graphType::BLACK;
   }
-
+  
   // keep cycling until all nodes scheduled
   bool done = false;
   while( !done )
   {
     done = true; // if we get through the for loop without scheduling, we're done
-
+    
     g.getGraph().rbegin()->get().helper.color = graphType::WHITE; // special math needed for the sink node
-
+    
     for( auto v = g.getGraph().rbegin(); v != g.getGraph().rend(); v++ ) // using reverse iterators
     {
       // if this node has already been scheduled, skip it
@@ -156,9 +156,9 @@ void Scheduler::ALAP( graphType& g, int latencyConstraint )
       {
         continue;
       }
-
+      
       done = false; // nope, still scheduling
-
+      
       // does this node have any successors?
       if( v->get().getLinksTo().empty() )
       {
@@ -169,7 +169,7 @@ void Scheduler::ALAP( graphType& g, int latencyConstraint )
         // check to see if all successors are scheduled
         int minStart = latencyConstraint; // will tell us when to start if all clear
         bool allClear = true;             // will tell us if it is all clear
-
+        
         // loop through all this node's successors
         for( auto p = v->get().getLinksTo().begin(); p != v->get().getLinksTo().end(); p++ )
         {
@@ -196,7 +196,7 @@ void Scheduler::ALAP( graphType& g, int latencyConstraint )
             }
           }
         }
-
+        
         // see if all successors are scheduled
         if( allClear )
         {
@@ -212,235 +212,267 @@ void Scheduler::FDS(graphType& g, int latencyConstraint)
 {
   // Minimize resources under a latency constraint
   
-  // make sure that nothing is scheduled for FDS
-  // this helper is awesome! a schedule time for each algorithm? brilliant.
-  
-  int timewidth = 0;
+  int Node_Time_Interval = 0;
   int timestep; // for iterating through times
+  
+  // Start with everything unscheduled
   for( auto v = g.getGraph().begin(); v != g.getGraph().end(); v++)
   {
     v->get().helper.schedTime[graphType::FDS] = NOT_SCHEDULED;
   }
-  ALAP(g, latencyConstraint);
-  ASAP(g);
+  
+  // Get the left and right edges for each node
+  ASAP(g); // for left edge
+  ALAP(g, latencyConstraint); // for right edge
+  
+  // first, compute time frames for every node.
+  // The time frame is just the earliest a node can be scheduled (ASAP)
+  // followed by the latest (ALAP)
+  
+  // TODO: I don't think this needs to happen every time since the ALAP and ASAP don't change
+  //       So I'm putting it outside the loop. Verify this is okay
   for( auto v = g.getGraph().begin(); v != g.getGraph().end(); v++)
   {
-    // first, compute time frames for every node.
-    // todo: really? every node every time? meh guess so.
-    // Fortunately, this is really easy now.
-    // The time frame is just the earliest a node can be scheduled (ASAP)
-    // followed by the latest (ALAP)
-    
-    
     // The width of the timeframe for every node is the ALAP - ASAP + 1
-    int leftEdge = v->get().helper.schedTime[graphType::ASAP];
-    int rightEdge = v->get().helper.schedTime[graphType::ALAP];
-    v->get().timeFrame[0] = leftEdge;
-    v->get().timeFrame[1] = rightEdge;
+    v->get().leftEdge = v->get().helper.schedTime[graphType::ASAP];
+    v->get().rightEdge = v->get().helper.schedTime[graphType::ALAP];
   }
-  // keep cycling until all nodes scheduled
-  bool done = false;
-  while(!done)
+  
+  // for each node in the graph
+  for( auto v = g.getGraph().begin(); v != g.getGraph().end(); v++)
   {
-    // repeat until all ops are scheduled
-    done = true; // if we get through the for loop without scheduling, we're done
+    //                   ALAP time               ASAP time
+    Node_Time_Interval = v->get().rightEdge - v->get().leftEdge + 1;
     
+    std::cout << "Node " << v->get().getNodeNumber() << " leftEdge " << v->get().leftEdge << " rightEdge " << v->get().rightEdge << " Timewidth " << Node_Time_Interval << std::endl;
     
-    for( auto v = g.getGraph().begin(); v != g.getGraph().end(); v++)
+    // compute the operations and type probabilities
+    // Operational Probability is easy. just 1/timewidth for times in the range. 0 else.
+    
+    for (timestep = 1; timestep <= latencyConstraint; timestep++)
     {
-      // first, compute time frames for every node.
-      // todo: really? every node every time? meh guess so.
-      // Fortunately, this is really easy now.
-      // The time frame is just the earliest a node can be scheduled (ASAP)
-      // followed by the latest (ALAP)
-      
-      
-      // The width of the timeframe for every node is the ALAP - ASAP + 1
-      int leftEdge = v->get().helper.schedTime[graphType::ASAP];
-      int rightEdge = v->get().helper.schedTime[graphType::ALAP];
-      
-      timewidth = rightEdge - leftEdge + 1;
-      
-      std::cout << "Node " << v->get().getNodeNumber() << " leftEdge " << leftEdge << " rightEdge " << rightEdge << " Timewidth " << timewidth << std::endl;
-      
-      // compute the operations and type probabilities
-      // Operational Probability is easy. just 1/timewidth for times in the range. 0 else.
-      
-      for (timestep = 1; timestep <= latencyConstraint; timestep++)
+      if (timestep >= v->get().leftEdge && timestep <= v->get().rightEdge)
       {
-        if (timestep >= leftEdge && timestep <= rightEdge)
-        {
-          float prob = 1.0/timewidth;
-          std::cout << "op prob " << prob <<  " recorded in cycle " << timestep << std::endl;
-          v->get().opProb.push_back(prob);
-        }
-        else
-        {
-          v->get().opProb.push_back(0.0);
-        }
-        
-        
-      }
-      std::cout << "Operational Probabilities [cycle][probability]" << std::endl;
-      
-      int time = 1;
-      for (auto t = v->get().opProb.begin(); t != v->get().opProb.end(); t++)
-      {
-        std::cout << "[" << time++ << "][" << *t << "]" << std::endl;
-      }
-    }
-    // now compute the type distribution
-    // Type Distribution is the sum of probabilities of the operations implemented by a specific
-    // resource at any time step of interest
-    
-    // the later it gets, the quicker and dirtier this solution is
-    std::vector<float> ad;
-    for ( timestep = 0 ; timestep < latencyConstraint; timestep++)
-    {
-      ad.push_back(0.0);
-      
-    }
-    float md = 0.0;
-    float dd = 0.0;
-    float ld = 0.0;
-    // TODO: make the obvious insertions. better yet, find a better way
-    
-    for( auto v = g.getGraph().begin(); v != g.getGraph().end(); v++)
-    {
-      
-      
-      // for each node sum the probabilities that the resource is being used in that time step
-      for (int timestep = 0; timestep < latencyConstraint; timestep++)
-      {
-        /*
-         ADDER_SUB,
-         MULTIPLIER,
-         LOGICAL,
-         DIV_MOD
-         */
-        if (v->get().getNode().get().getResource() == Statement::ADDER_SUB)
-        {
-          std::vector<float>::iterator it = v->get().opProb.begin();
-          std::advance(it,timestep);
-          ad[timestep] += *it;
-        }
-        
-      }
-    }
-    std::cout << " ADD Probabilities for each timestep" << std::endl;
-    std::cout << " [cycle][Probability of use]" << std::endl;
-    for ( timestep = 1; timestep <= latencyConstraint; timestep++)
-    {
-      std::cout << " [" << timestep << "]" << "[" << ad[timestep -1] << "]" << std::endl;
-    }
-    
-    // Compute self forces, pred/successor forces, and total forces
-    
-    // for each node, compute the self force
-    for( auto v = g.getGraph().begin(); v != g.getGraph().end(); v++)
-    {
-      // from the look of it, compute a self force for each time step
-      float selfForce = 0.0;
-      // damn, have to do it this way again? if only I had started earlier I
-      // could think of a better way to do this.
-      if (v->get().getNode().get().getResource() == Statement::ADDER_SUB)
-      {
-        for (timestep = v->get().timeFrame[0]; timestep <= v->get().timeFrame[1]; timestep++)
-        {
-          selfForce = 0.0;
-          for (int k = v->get().timeFrame[0]; k <= v->get().timeFrame[1]; k++)
-          {
-            selfForce +=  v->get().ComputeSelfForceForTimeSlot(timestep, ad[k-1], timestep==k);
-            
-          }
-          std::cout << "Self force for node " << v->get().getNodeNumber() << " at timestep " << timestep << " is " << selfForce << std::endl;
-          v->get().selfForce.push_back(selfForce);
-        }
-        
-        
-        
+        float prob = 1.0/Node_Time_Interval;
+        std::cout << "op prob " << prob <<  " recorded in cycle " << timestep << std::endl;
+        v->get().opProb.push_back(prob);
       }
       else
       {
-        v->get().selfForce.push_back(selfForce);
+        v->get().opProb.push_back(0.0);
       }
-    } // self forces calculated
-    // now do the pred succ forces for each timestep and record the total force for each time step
-    for( auto v = g.getGraph().begin(); v != g.getGraph().end(); v++)
-    {
-      for (timestep = v->get().timeFrame[0]; timestep <= v->get().timeFrame[1]; timestep++)
-      {
-        // check to see if scheduling in this timestep affects the predecessors
-        float SuccessorForce = 0.0;
-        
-        if (!v->get().getLinksFrom().empty())
-        {
-          
-          // loop through all this node's successors
-          for( auto p = v->get().getLinksFrom().begin(); p != v->get().getLinksFrom().end(); p++)
-          {
-            // this scheduled timeslot interfere's with a successor's timeslot
-            // so calculate the successor force
-            if (timestep >= p->get().timeFrame[0] && timestep <= p->get().timeFrame[1])
-            {
-              // looks like this is almost the same as the node's self force, except that we don't calculate the self force for the current time step
-              // for example, if we are in cycle 2 and the successor node has a time width of 2 from 2 to 3
-              // then we calculate the self force for the successor node only for time 3
-              // TODO; verify this.
-              for (int k = v->get().timeFrame[0]; k <= v->get().timeFrame[1]; k++)
-              { // this is for each of the time frames which is what we want.
-                // however need to tell it when to schedule it
-                
-                // todo this will probably not work if the timewidths are greater than 1 for the suc nodes
-                SuccessorForce = p->get().ComputeSelfForceForTimeSlot(timestep, ad[k-1], timestep!=k);
-              }
-            }
-            
-          }
-        }// successor forces calculated
-        float PredecessorForce = 0.0;
-        if (!v->get().getLinksTo().empty())
-        {
-          for( auto p = v->get().getLinksTo().begin(); p != v->get().getLinksTo().end(); p++)
-          {
-            // this scheduled timeslot interfere's with a successor's timeslot
-            // so calculate the successor force
-            if (timestep >= p->get().timeFrame[0] && timestep <= p->get().timeFrame[1])
-            {
-              // looks like this is almost the same as the node's self force, except that we don't calculate the self force for the current time step
-              // for example, if we are in cycle 2 and the successor node has a time width of 2 from 2 to 3
-              // then we calculate the self force for the successor node only for time 3
-              // TODO; verify this.
-              for (int k = v->get().timeFrame[0]; k <= v->get().timeFrame[1]; k++)
-              {
-                // todo this will probably not work if the timewidths are greater than 1 for the suc nodes
-                PredecessorForce = p->get().ComputeSelfForceForTimeSlot(timestep, ad[k-1], timestep!=k);
-              }
-            }
-            
-          }
-        }// predecessor forces calc'd
-        v->get().TotalForce.push_back(v->get().selfForce[timestep] + SuccessorForce + PredecessorForce);
-        std::cout << "The total force for node " << v->get().getNodeNumber() << " is " << v->get().selfForce[timestep] + SuccessorForce + PredecessorForce  << " at cycle " << timestep << std::endl;
-      }
-      //Now that we've done all the (applicable) timesteps pick the least force to schedule
-      int LeastForceIndex = 0;
-      float LeastForce = *v->get().TotalForce.begin();
-      for (int oops = v->get().timeFrame[0]; oops <= v->get().timeFrame[1]; oops++)
-      {
-        if (v->get().TotalForce[oops] < LeastForce)
-        {
-          LeastForce = v->get().TotalForce[oops];
-          LeastForceIndex = oops;
-        }
-      }
-      v->get().helper.schedTime[graphType::FDS] = LeastForceIndex;
-//      v->get().helper.schedTime[graphType::FDS]
-      //v->get().helper.schedTime[graphType::FDS] = distance(v->get().TotalForce.begin(),std::min_element(v->get().TotalForce.begin(), v->get().TotalForce.end() ) );
-      //v->get().helper.schedTime[graphType::FDS] = *std::min_element(v->get().TotalForce.begin(), v->get().TotalForce.end() );
+      
+      
     }
+    std::cout << "Operational Probabilities [cycle][probability]" << std::endl;
+    
+    int time = 1;
+    for (auto t = v->get().opProb.begin(); t != v->get().opProb.end(); t++)
+    {
+      std::cout << "[" << time++ << "][" << *t << "]" << std::endl;
+    }
+  }
+  // now compute the type distribution
+  // Type Distribution is the sum of probabilities of the operations implemented by a specific
+  // resource at any time step of interest
+  
+  // TODO:  find a better way to keep track of typeDistributions
+  std::vector<float> ad;
+  std::vector<float> md;
+  std::vector<float> dd;
+  std::vector<float> ld;
+  std::vector<float> NOP;
+  // set them all to 0.0 first
+  for ( timestep = 0 ; timestep < latencyConstraint; timestep++)
+  {
+    ad.push_back(0.0);
+    md.push_back(0.0);
+    dd.push_back(0.0);
+    ld.push_back(0.0);
+    NOP.push_back(0.0);
+  }
+  
+  for( auto v = g.getGraph().begin(); v != g.getGraph().end(); v++)
+  {
+    // for each node sum the probabilities that the resource is being used in that time step
+    for (int timestep = 0; timestep < latencyConstraint; timestep++)
+    {
+      if (v->get().getNode().get().getResource() == Statement::ADDER_SUB)
+      {
+        std::vector<float>::iterator it = v->get().opProb.begin();
+        std::advance(it,timestep);
+        ad[timestep] += *it;
+      }
+      if (v->get().getNode().get().getResource() == Statement::MULTIPLIER)
+      {
+        std::vector<float>::iterator it = v->get().opProb.begin();
+        std::advance(it,timestep);
+        md[timestep] += *it;
+      }
+      if (v->get().getNode().get().getResource() == Statement::DIV_MOD)
+      {
+        std::vector<float>::iterator it = v->get().opProb.begin();
+        std::advance(it,timestep);
+        dd[timestep] += *it;
+      }
+      if (v->get().getNode().get().getResource() == Statement::LOGICAL)
+      {
+        std::vector<float>::iterator it = v->get().opProb.begin();
+        std::advance(it,timestep);
+        ld[timestep] += *it;
+      }
+      
+    }
+  }
+  // for each node in the graph take note of the associated resource list
+  for( auto v = g.getGraph().begin(); v != g.getGraph().end(); v++)
+  {
+    if (v->get().getNode().get().getResource() == Statement::ADDER_SUB)
+    {
+      v->get().ResourceTypeDistribution = ad;
+    }
+    else if (v->get().getNode().get().getResource() == Statement::MULTIPLIER)
+    {
+      v->get().ResourceTypeDistribution = md;
+    }
+    else if (v->get().getNode().get().getResource() == Statement::DIV_MOD)
+    {
+      v->get().ResourceTypeDistribution = dd;
+    }
+    else if (v->get().getNode().get().getResource() == Statement::LOGICAL)
+    {
+      v->get().ResourceTypeDistribution = ld;
+    }
+    else
+    {
+      // NOP
+      v->get().ResourceTypeDistribution = NOP;
+    }
+  }
+  std::cout << " ADDER/SUBTRACTOR USE Probabilities for each timestep" << std::endl;
+  std::cout << " [cycle][Probability of use]" << std::endl;
+  for ( timestep = 1; timestep <= latencyConstraint; timestep++)
+  {
+    std::cout << " [" << timestep << "]" << "[" << ad[timestep -1] << "]" << std::endl;
+  }
+  
+  std::cout << " MULTIPLIER USE Probabilities for each timestep" << std::endl;
+  std::cout << " [cycle][Probability of use]" << std::endl;
+  for ( timestep = 1; timestep <= latencyConstraint; timestep++)
+  {
+    std::cout << " [" << timestep << "]" << "[" << md[timestep -1] << "]" << std::endl;
+  }
+  std::cout << " DIVIDER/MOD USE Probabilities for each timestep" << std::endl;
+  std::cout << " [cycle][Probability of use]" << std::endl;
+  for ( timestep = 1; timestep <= latencyConstraint; timestep++)
+  {
+    std::cout << " [" << timestep << "]" << "[" << dd[timestep -1] << "]" << std::endl;
+  }
+  std::cout << " LOGICAL USE Probabilities for each timestep" << std::endl;
+  std::cout << " [cycle][Probability of use]" << std::endl;
+  for ( timestep = 1; timestep <= latencyConstraint; timestep++)
+  {
+    std::cout << " [" << timestep << "]" << "[" << ld[timestep -1] << "]" << std::endl;
+  }
+  
+  // Compute self forces, pred/successor forces, and total forces
+  
+  
+  // for each node, compute the self force, pred force, and succ force for each timestep
+  for( auto v = g.getGraph().begin(); v != g.getGraph().end(); v++)
+  {
+    float selfForce         = 0.0;
+    float SuccessorForce    = 0.0;
+    float PredecessorForce  = 0.0;
+    std::cout<< "\n\n\n\n\n" << "Forces for node " << v->get().getNodeNumber()  << std::endl;
+    for (timestep = v->get().leftEdge; timestep <= v->get().rightEdge; timestep++)
+    {
+      selfForce = 0.0;
+      
+      for (int k = v->get().leftEdge; k <= v->get().rightEdge; k++)
+      {
+        //std::cout << "  Self Force at time " << k << " is " << v->get().ComputeSelfForceForTimeSlot(timestep, v->get().ResourceTypeDistribution[k-1], timestep==k) << std::endl;
+        selfForce +=  v->get().ComputeSelfForceForTimeSlot(timestep, v->get().ResourceTypeDistribution[k-1], timestep==k);
+      }
+      std::cout << "Self force for node " << v->get().getNodeNumber() << " at timestep " << timestep << " is " << selfForce << std::endl;
+      v->get().selfForce.push_back(selfForce);
+      
+      // now do the pred succ forces
+      
+      // check to see if scheduling in this timestep affects the successors
+      // loop through all this node's successors
+      SuccessorForce = v->get().ComputeSuccessorForceForTimeSlot(timestep);
+      //      for( auto p = v->get().getLinksTo().begin(); p != v->get().getLinksTo().end(); p++)
+      //      {
+      //
+      //        // this scheduled timeslot interfere's with a successor's timeslot
+      //        // so calculate the successor force
+      //        if (timestep >= p->get().leftEdge && timestep <= p->get().rightEdge)
+      //        {
+      //          std::cout << "Cycle " << timestep << std::endl;
+      //          // looks like this is almost the same as the node's self force, except that we don't calculate the self force for the current time step
+      //          // for example, if we are in cycle 2 and the successor node has a time width of 2 from 2 to 3
+      //          // then we calculate the self force for the successor node only for time 3
+      //          // TODO; verify this. Still seems good the morning after
+      //
+      //          // tODO recursively do this for each successor of the successors
+      //          for (int k = p->get().leftEdge; k <= p->get().rightEdge; k++)
+      //          { // this is for each of the time frames which is what we want.
+      //
+      //            std::cout << "  Successor Force at time " << k << " from node " << p->get().getNodeNumber() << " is \n\r" << p->get().ComputeSelfForceForTimeSlot(timestep, p->get().ResourceTypeDistribution[k-1], timestep!=k) << std::endl;
+      //            // todo this will probably not work if the timewidths are greater than 1 for the suc nodes
+      //            SuccessorForce = p->get().ComputeSelfForceForTimeSlot(timestep, p->get().ResourceTypeDistribution[k-1], timestep!=k);
+      //          }
+      //        }
+      //        else
+      //        {
+      //          std::cout << "  Successor Force at time " << timestep << " from node " << p->get().getNodeNumber() << " is " << 0 << std::endl;
+      //        }
+      //      }
+      if (!v->get().getLinksTo().empty())
+      {
+        for( auto p = v->get().getLinksTo().begin(); p != v->get().getLinksTo().end(); p++)
+        {
+          // this scheduled timeslot interfere's with a successor's timeslot
+          // so calculate the successor force
+          if (timestep >= p->get().leftEdge && timestep <= p->get().rightEdge)
+          {
+            // looks like this is almost the same as the node's self force, except that we don't calculate the self force for the current time step
+            // for example, if we are in cycle 2 and the successor node has a time width of 2 from 2 to 3
+            // then we calculate the self force for the successor node only for time 3
+            // TODO; verify this.
+            for (int k = v->get().leftEdge; k <= v->get().rightEdge; k++)
+            {
+              // todo this will probably not work if the timewidths are greater than 1 for the suc nodes
+              PredecessorForce = p->get().ComputeSelfForceForTimeSlot(timestep, ad[k-1], timestep!=k);
+            }
+          }
+          
+        }
+      }// predecessor forces calc'd
+      v->get().TotalForce.push_back(v->get().selfForce[timestep] + SuccessorForce + PredecessorForce);
+      std::cout << "The total force for node " << v->get().getNodeNumber() << " is " << v->get().selfForce[timestep - 1] + SuccessorForce + PredecessorForce  << " at cycle " << timestep << std::endl;
+      
+      
+      
+    }
+    //Now that we've done all the (applicable) timesteps pick the least force to schedule
+    int LeastForceIndex = 0;
+    float LeastForce = *v->get().TotalForce.begin();
+    for (int oops = v->get().leftEdge; oops <= v->get().rightEdge; oops++)
+    {
+      if (v->get().TotalForce[oops] < LeastForce)
+      {
+        // LeastForce = v->get().TotalForce[oops];// Eric's changes pre merge
+        LeastForceIndex = oops;
+      }
+    }
+    // v->get().helper.schedTime[graphType::FDS] = LeastForceIndex; // Eric's changes pre-merge
+    v->get().helper.schedTime[graphType::FDS] = v->get().leftEdge + LeastForceIndex;
     
   }
+  
+  
 }
 
 int Scheduler::buildPartTimeMap( partitionMap_t& m, graphType& g, graphType::ScheduleID s )
@@ -451,7 +483,7 @@ int Scheduler::buildPartTimeMap( partitionMap_t& m, graphType& g, graphType::Sch
     int stime = v->get().helper.schedTime[s];
     m[part][stime].push_back( v->get().getVertex() );
   }
-
+  
   // return the number of states
   return std::prev(std::prev(m.end())->second.end())->first + 1;
 }
