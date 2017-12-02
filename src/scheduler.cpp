@@ -42,7 +42,7 @@ bool Scheduler::process( Statements& input, graphType& output, int latencyConstr
     if( maxTimeSlot > latencyConstraint )
     {
       std::cout << "WARNING: the given latency constraint of " << latencyConstraint << " is less than the ASAP schedule; compensating." << std::endl;
-      latencyConstraint = maxTimeSlot;
+      latencyConstraint = maxTimeSlot-1;
     }
   }
 
@@ -138,6 +138,7 @@ void Scheduler::ALAP( graphType& g, int latencyConstraint )
   for( auto v = g.getGraph().begin(); v != g.getGraph().end(); v++ )
   {
     v->get().helper.schedTime[graphType::ALAP] = NOT_SCHEDULED;
+    v->get().helper.color = graphType::BLACK;
   }
 
   // keep cycling until all nodes scheduled
@@ -145,6 +146,8 @@ void Scheduler::ALAP( graphType& g, int latencyConstraint )
   while( !done )
   {
     done = true; // if we get through the for loop without scheduling, we're done
+
+    g.getGraph().rbegin()->get().helper.color = graphType::WHITE; // special math needed for the sink node
 
     for( auto v = g.getGraph().rbegin(); v != g.getGraph().rend(); v++ ) // using reverse iterators
     {
@@ -159,7 +162,7 @@ void Scheduler::ALAP( graphType& g, int latencyConstraint )
       // does this node have any successors?
       if( v->get().getLinksTo().empty() )
       {
-        v->get().helper.schedTime[graphType::ALAP] = latencyConstraint; // schedule at end
+        v->get().helper.schedTime[graphType::ALAP] = latencyConstraint + 1; // schedule at end
       }
       else
       {
@@ -171,7 +174,11 @@ void Scheduler::ALAP( graphType& g, int latencyConstraint )
         for( auto p = v->get().getLinksTo().begin(); p != v->get().getLinksTo().end(); p++ )
         {
           // grab the latency of the successors statement operation
-          int latency = p->get().getNode().get().getStatement()->scheduleLatency();
+          int latency;
+          if( p->get().helper.color == graphType::WHITE )
+            latency = 1; // special case to keep the sink node at a later time
+          else
+            latency = p->get().getNode().get().getStatement()->scheduleLatency();
           // see if the successor has been scheduled
           if( p->get().helper.schedTime[graphType::ALAP] <= NOT_SCHEDULED )
           {
