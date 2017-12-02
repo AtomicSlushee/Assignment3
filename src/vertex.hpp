@@ -19,6 +19,7 @@ template< class NODETYPE, class IOTYPE, class HELPER >
     std::vector<float> opProb;
     std::vector<float> TotalForce;
     std::vector<float> selfForce;
+    
     float timeFrame[2] = {0};
     
 
@@ -32,7 +33,16 @@ template< class NODETYPE, class IOTYPE, class HELPER >
     ~Vertex()
     {
     }
-
+    float ComputeSelfForceForTimeSlot(int timeslot, float typeDist, bool occursThisSlot)
+    {
+      float selfForce = 0.0;
+      float opProbabilty = 0.0;
+      opProbabilty = opProb[timeslot-1];
+      selfForce = typeDist*(occursThisSlot - opProbabilty);
+      
+      return selfForce;
+      
+    }
     void addInput( IOTYPE& i )
     {
       inList.push_back( i );
