@@ -10,7 +10,7 @@ public:
   // enumerations of the component types
   enum ID
   {
-    REG, ADD, SUB, MUL, GT, LT, EQ, MUX2x1, SHR, SHL, DIV, MOD, INC, DEC, UNITY, SELECT
+    REG, ADD, SUB, MUL, GT, LT, EQ, MUX2x1, SHR, SHL, DIV, MOD, INC, DEC, UNITY, SELECT, NOP
   };
 
   // constructor
@@ -109,12 +109,18 @@ public:
   {
     return isOperatorID( oper,Operator::MUX2x1 );
   }
+  bool isNOP( const std::string oper )
+  {
+    return isOperatorID( oper,Operator::NOP );
+  }
 
 private:
   typedef std::pair< std::string, Operator > pair_t;
 
   Operators()
   {
+    // NOTE: operator strings that begin with space can be created
+    //       by the code, but cannot be introduced by parsing text
     static Operator t_reg( "=",Operator::REG,"REG",1 );
     static Operator t_add( "+",Operator::ADD,"ADD",2 );
     static Operator t_sub( "-",Operator::SUB,"SUB",2 );
@@ -131,6 +137,7 @@ private:
     static Operator t_dec( " -1",Operator::DEC,"DEC",1 );
     static Operator t_unity( "1",Operator::UNITY,"n/a",0 );
     static Operator t_select( ":",Operator::SELECT,"n/a",0 );
+    static Operator t_nop( " nop",Operator::NOP,"n/a",0 );
     insert( pair_t( t_reg.name(),t_reg ) );
     insert( pair_t( t_add.name(),t_add ) );
     insert( pair_t( t_sub.name(),t_sub ) );
@@ -147,6 +154,7 @@ private:
     insert( pair_t( t_dec.name(),t_dec ) );
     insert( pair_t( t_unity.name(),t_unity ) );
     insert( pair_t( t_select.name(),t_select ) );
+    insert( pair_t( t_nop.name(),t_nop ) );
   }
 };
 
