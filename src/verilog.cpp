@@ -101,6 +101,8 @@ bool Verilog::HLSM( std::ofstream& out, std::string name, Variables& vars, Varia
           {
             lastState++;
             out << Indent( THEN_OUT ) << Variables::nameState() << " <= " << lastState << ";" << std::endl;
+            if( 1 == lastState ) Indent(OUT);
+            out << Indent() << "end" << std::endl;
             out << Indent( THEN_IN ) << lastState << ": begin" << std::endl;
           }
           // now transition to next state

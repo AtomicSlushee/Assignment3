@@ -42,10 +42,7 @@ int HLSM::CtoHLSM( graphType& g, graphType& hlsm, Variables& modelVars, graphTyp
   // declare a map
   Scheduler::partitionMap_t m;
   // build a map from which we'll generate the HLSM
-  scheduler.buildPartTimeMap( m, g, id );
-
-  // max time slot is last state; add one
-  int numStates = std::prev(std::prev(m.end())->second.end())->first + 1;
+  int numStates = scheduler.buildPartTimeMap( m, g, id );
 
   // add the state variable, with just enough bits
   int width = BitsToRepresent( NextHighestPowerOfTwo( numStates ));

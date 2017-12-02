@@ -28,7 +28,7 @@ public:
   typedef std::map<int,vertList_t> timeMap_t;
   typedef std::map<int,timeMap_t> partitionMap_t;
 
-  void buildPartTimeMap(partitionMap_t& m, graphType& g, graphType::ScheduleID s);
+  int buildPartTimeMap(partitionMap_t& m, graphType& g, graphType::ScheduleID s);
   void dumpScheduledGraph(graphType& g, graphType::ScheduleID s);
 
 private:
