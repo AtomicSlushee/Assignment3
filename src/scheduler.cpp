@@ -430,10 +430,11 @@ void Scheduler::FDS(graphType& g, int latencyConstraint)
       {
         if (v->get().TotalForce[oops] < LeastForce)
         {
+          LeastForce = v->get().TotalForce[oops];
           LeastForceIndex = oops;
         }
       }
-      v->get().helper.schedTime[graphType::FDS] = v->get().timeFrame[LeastForceIndex];
+      v->get().helper.schedTime[graphType::FDS] = LeastForceIndex;
 //      v->get().helper.schedTime[graphType::FDS]
       //v->get().helper.schedTime[graphType::FDS] = distance(v->get().TotalForce.begin(),std::min_element(v->get().TotalForce.begin(), v->get().TotalForce.end() ) );
       //v->get().helper.schedTime[graphType::FDS] = *std::min_element(v->get().TotalForce.begin(), v->get().TotalForce.end() );
