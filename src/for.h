@@ -39,20 +39,9 @@ public:
     return mWidth;
   }
 
-  std::string C_format()
-  {
-    std::string out;
-    out = "for-loop is todo"; //TODO
-    return out;
-  }
+  std::string C_format();
 
-  // stream override to output the statement in Verilog
-  friend std::ostream& operator<<( std::ostream& out, ForLoop& a )
-  {
-    out << "FOR-LOOP IS TODO"; //TODO
-    /*DEBUG*/out << " // " << a.C_format();
-    return out;
-  }
+  friend std::ostream& operator<<( std::ostream& out, ForLoop& a );
 
 private:
   int mWidth;

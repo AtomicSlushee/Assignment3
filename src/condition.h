@@ -3,6 +3,7 @@
 
 #include "variable.h"
 #include "operator.h"
+#include "assignment.h"
 #include <string>
 
 class Condition
@@ -13,6 +14,16 @@ public:
   : mLeft( left )
   , mLogic( logic )
   , mRight( right )
+  {
+    // determine operator width
+    mWidth = 0; //TODO
+  }
+
+  // constructor for simple 'if(variable)' construct
+  Condition( Variable& left )
+  : mLeft( left )
+  , mLogic( Singleton<Operators>::instance().getOperatorByID(Operator::NOP) )
+  , mRight( Assignment::dummyvar() )
   {
     // determine operator width
     mWidth = 0; //TODO
@@ -45,15 +56,17 @@ public:
   std::string C_format()
   {
     std::string out;
-    out = "condition expression is todo"; //TODO
+    out = mLeft.name();
+    if( mLogic.id() != Operator::NOP )
+      out += " " + mLogic.name() + " " + mRight.name();
+
     return out;
   }
 
   // stream override to output the statement in Verilog
   friend std::ostream& operator<<( std::ostream& out, Condition& a )
   {
-    out << "CONDITION EXPRESSION IS TODO"; //TODO
-    /*DEBUG*/out << " // " << a.C_format();
+    out << " // " << a.C_format();
     return out;
   }
 
