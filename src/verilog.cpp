@@ -56,7 +56,7 @@ bool Verilog::HLSM( std::ofstream& out, std::string name, Variables& vars, Varia
 
   // start with the various module declarations
   setIndent( 0 );
-  DeclareModule( out,"HLSM",vars );
+  DeclareModule( out,"HLSM",vars, mvars );
   Indent( IN );
   DeclareVariableList( out,vars );
   DeclareVariableList( out,mvars,"Model Variables" );
@@ -167,33 +167,36 @@ void Verilog::DeclareTimescale( std::ofstream& out )
   out << Indent() << "`timescale 1ns / 1ps" << std::endl;
 }
 
-void Verilog::DeclareModule(std::ofstream& out, std::string name, Variables& vars)
+void Verilog::DeclareModule(std::ofstream& out, std::string name, Variables& moduleVars)
+{
+  ModelVariables modelVars;
+  DeclareModule( out, name, moduleVars, modelVars );
+}
+
+void Verilog::DeclareModule(std::ofstream& out, std::string name, Variables& moduleVars, Variables& modelVars)
 {
   bool comma = false;
 
   // declare module
   out << Indent() << "module " << name << "(";
-  for (Variables::iterator i = vars.begin(); i != vars.end(); i++)
-  {
-    if( vars[i].ioClass() == IOClass::INPUT )
-    {
-      if( comma )
-        out << ",";
-      out << vars[i].name();
-      comma = true;
-    }
-  }
-  for (Variables::iterator i = vars.begin(); i != vars.end(); i++)
-  {
-    if( vars[i].ioClass() == IOClass::OUTPUT )
-    {
-      if( comma )
-        out << ",";
-      out << vars[i].name();
-      comma = true;
-    }
-  }
+  ListVariables( out, moduleVars, comma );
+  ListVariables( out, modelVars, comma );
   out << ");" << std::endl;
+}
+
+void Verilog::ListVariables(std::ofstream& out, Variables& vars, bool& comma)
+{
+  for (Variables::iterator i = vars.begin(); i != vars.end(); i++)
+  {
+    if(( vars[i].ioClass() == IOClass::INPUT ) ||
+       ( vars[i].ioClass() == IOClass::OUTPUT ))
+    {
+      if( comma )
+        out << ",";
+      out << vars[i].name();
+      comma = true;
+    }
+  }
 }
 
 void Verilog::EndModule(std::ofstream& out)

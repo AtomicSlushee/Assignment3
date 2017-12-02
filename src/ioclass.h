@@ -61,7 +61,7 @@ private:
   IOClasses()
   {
     static IOClass t_input( "input",IOClass::INPUT,"input" );
-    static IOClass t_output( "output",IOClass::OUTPUT,"output" );
+    static IOClass t_output( "output",IOClass::OUTPUT,"output reg" );
     static IOClass t_wire( "wire",IOClass::WIRE,"wire" );
     static IOClass t_register( "register",IOClass::REGISTER,"reg" );
     static IOClass t_variable( "variable",IOClass::VARIABLE,"reg" );

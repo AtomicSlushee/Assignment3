@@ -19,7 +19,9 @@ public:
 private:
   Verilog();
   void DeclareTimescale(std::ofstream& out);
-  void DeclareModule(std::ofstream& out, std::string name, Variables& vars);
+  void DeclareModule(std::ofstream& out, std::string name, Variables& moduleVars);
+  void DeclareModule(std::ofstream& out, std::string name, Variables& moduleVars, Variables& modelVars);
+  void ListVariables(std::ofstream& out, Variables& vars, bool& comma);
   void DeclareVariableList(std::ofstream& out, Variables& vars, std::string comment="");
   void DeclareVariablesHLSM(std::ofstream& out, Variables& vars);
   void EndModule(std::ofstream& out);
