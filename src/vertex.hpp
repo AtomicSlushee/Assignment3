@@ -34,6 +34,8 @@ public:
   ~Vertex()
   {
   }
+  
+  
   float ComputeSelfForceForTimeSlot(int timeslot, float typeDist, bool occursThisSlot)
   {
     float selfForce = 0.0;
@@ -43,6 +45,23 @@ public:
     std::cout << "\t\tCycle " << timeslot << " : " <<  typeDist << "*("<<occursThisSlot<<" - " << opProbabilty << ")" << std::endl;
     return selfForce;
     
+  }
+  float ComputeSelfForce(int timestep)
+  {
+    float sf = 0.0;
+    for (int k = leftEdge; k <= rightEdge; k++)
+    {
+      //std::cout << "  Self Force at time " << k << " is " << v->get().ComputeSelfForceForTimeSlot(timestep, v->get().ResourceTypeDistribution[k-1], timestep==k) << std::endl;
+      sf +=  ComputeSelfForceForTimeSlot(timestep, ResourceTypeDistribution[k-1], timestep==k);
+    }
+    std::cout << "Self force for node " << getNodeNumber() << " at cycle "<< timestep <<" is " << sf << std::endl;
+    this->selfForce.push_back(sf);// may be unnecessary now
+    return sf;
+  }
+  float ComputePredecessorForceForTimeSlot(int timestep)
+  {
+    float PredecessorForce = 0.0;
+    return PredecessorForce;
   }
   float ComputeSuccessorForceForTimeSlot(int timestep)
   {
@@ -58,15 +77,17 @@ public:
         for (int k = p->get().leftEdge; k <= p->get().rightEdge; k++)
         { // this is for each of the time frames which is what we want.
           
-          std::cout << "  Successor Force at time " << k << " from node " << p->get().getNodeNumber() << " is \n\r" << p->get().ComputeSelfForceForTimeSlot(timestep, p->get().ResourceTypeDistribution[k-1], timestep!=k) << std::endl;
+          
           // todo this will probably not work if the timewidths are greater than 1 for the suc nodes
           SuccessorForce = p->get().ComputeSelfForceForTimeSlot(timestep, p->get().ResourceTypeDistribution[k-1], timestep!=k);
+          std::cout << "  Successor Force at time " << k << " from node " << p->get().getNodeNumber() << " is " << SuccessorForce << std::endl;
+          // Now we've done it for the first layer, we must go deeper
+          if (!p->get().getLinksTo().empty())
+          {
+            SuccessorForce += p->get().ComputeSuccessorForceForTimeSlot(k);
+          }
         }
-        // Now we've done it for the first layer, we must go deeper
-        if (!p->get().getLinksTo().empty())
-        {
-          SuccessorForce += p->get().ComputeSuccessorForceForTimeSlot(timestep);
-        }
+        
         
       }
       else

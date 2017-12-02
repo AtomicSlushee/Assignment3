@@ -374,87 +374,28 @@ void Scheduler::FDS(graphType& g, int latencyConstraint)
   {
     std::cout << " [" << timestep << "]" << "[" << ld[timestep -1] << "]" << std::endl;
   }
-  
-  // Compute self forces, pred/successor forces, and total forces
-  
+
   
   // for each node, compute the self force, pred force, and succ force for each timestep
   for( auto v = g.getGraph().begin(); v != g.getGraph().end(); v++)
   {
-    float selfForce         = 0.0;
-    float SuccessorForce    = 0.0;
-    float PredecessorForce  = 0.0;
+    
     std::cout<< "\n\n\n\n\n" << "Forces for node " << v->get().getNodeNumber()  << std::endl;
     for (timestep = v->get().leftEdge; timestep <= v->get().rightEdge; timestep++)
     {
-      selfForce = 0.0;
+      float selfForce         = 0.0;
+      float SuccessorForce    = 0.0;
+      float PredecessorForce  = 0.0;
+
+      selfForce = v->get().ComputeSelfForce(timestep);
       
-      for (int k = v->get().leftEdge; k <= v->get().rightEdge; k++)
-      {
-        //std::cout << "  Self Force at time " << k << " is " << v->get().ComputeSelfForceForTimeSlot(timestep, v->get().ResourceTypeDistribution[k-1], timestep==k) << std::endl;
-        selfForce +=  v->get().ComputeSelfForceForTimeSlot(timestep, v->get().ResourceTypeDistribution[k-1], timestep==k);
-      }
-      std::cout << "Self force for node " << v->get().getNodeNumber() << " at timestep " << timestep << " is " << selfForce << std::endl;
-      v->get().selfForce.push_back(selfForce);
-      
-      // now do the pred succ forces
-      
-      // check to see if scheduling in this timestep affects the successors
-      // loop through all this node's successors
       SuccessorForce = v->get().ComputeSuccessorForceForTimeSlot(timestep);
-      //      for( auto p = v->get().getLinksTo().begin(); p != v->get().getLinksTo().end(); p++)
-      //      {
-      //
-      //        // this scheduled timeslot interfere's with a successor's timeslot
-      //        // so calculate the successor force
-      //        if (timestep >= p->get().leftEdge && timestep <= p->get().rightEdge)
-      //        {
-      //          std::cout << "Cycle " << timestep << std::endl;
-      //          // looks like this is almost the same as the node's self force, except that we don't calculate the self force for the current time step
-      //          // for example, if we are in cycle 2 and the successor node has a time width of 2 from 2 to 3
-      //          // then we calculate the self force for the successor node only for time 3
-      //          // TODO; verify this. Still seems good the morning after
-      //
-      //          // tODO recursively do this for each successor of the successors
-      //          for (int k = p->get().leftEdge; k <= p->get().rightEdge; k++)
-      //          { // this is for each of the time frames which is what we want.
-      //
-      //            std::cout << "  Successor Force at time " << k << " from node " << p->get().getNodeNumber() << " is \n\r" << p->get().ComputeSelfForceForTimeSlot(timestep, p->get().ResourceTypeDistribution[k-1], timestep!=k) << std::endl;
-      //            // todo this will probably not work if the timewidths are greater than 1 for the suc nodes
-      //            SuccessorForce = p->get().ComputeSelfForceForTimeSlot(timestep, p->get().ResourceTypeDistribution[k-1], timestep!=k);
-      //          }
-      //        }
-      //        else
-      //        {
-      //          std::cout << "  Successor Force at time " << timestep << " from node " << p->get().getNodeNumber() << " is " << 0 << std::endl;
-      //        }
-      //      }
-      if (!v->get().getLinksTo().empty())
-      {
-        for( auto p = v->get().getLinksTo().begin(); p != v->get().getLinksTo().end(); p++)
-        {
-          // this scheduled timeslot interfere's with a successor's timeslot
-          // so calculate the successor force
-          if (timestep >= p->get().leftEdge && timestep <= p->get().rightEdge)
-          {
-            // looks like this is almost the same as the node's self force, except that we don't calculate the self force for the current time step
-            // for example, if we are in cycle 2 and the successor node has a time width of 2 from 2 to 3
-            // then we calculate the self force for the successor node only for time 3
-            // TODO; verify this.
-            for (int k = v->get().leftEdge; k <= v->get().rightEdge; k++)
-            {
-              // todo this will probably not work if the timewidths are greater than 1 for the suc nodes
-              PredecessorForce = p->get().ComputeSelfForceForTimeSlot(timestep, ad[k-1], timestep!=k);
-            }
-          }
-          
-        }
-      }// predecessor forces calc'd
+      
+      PredecessorForce = v->get().ComputePredecessorForceForTimeSlot(timestep);
+
       v->get().TotalForce.push_back(v->get().selfForce[timestep] + SuccessorForce + PredecessorForce);
+      
       std::cout << "The total force for node " << v->get().getNodeNumber() << " is " << v->get().selfForce[timestep - 1] + SuccessorForce + PredecessorForce  << " at cycle " << timestep << std::endl;
-      
-      
-      
     }
     //Now that we've done all the (applicable) timesteps pick the least force to schedule
     int LeastForceIndex = 0;
