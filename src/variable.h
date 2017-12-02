@@ -5,7 +5,7 @@
 #include "ioclass.h"
 
 #include <string>
-#include <map>
+#include <vector>
 #include <iostream>
 
 class Variable
@@ -105,10 +105,11 @@ private:
   long mValue;
 };
 
-class Variables : public std::map< std::string, Variable >
+class Variables : public std::vector< std::pair< std::string, Variable >>
 {
 private:
   typedef std::pair< std::string, Variable > pair_t;
+  typedef std::vector< pair_t > vector_t;
 
 public:
   static std::string nameState(){static std::string name="state"; return name;}
@@ -120,31 +121,40 @@ public:
   }
   bool isVariable( std::string variable )
   {
-    return find( variable ) != end();
+    return Find( variable ) != end();
   }
   Variable& getVariable( std::string variable )
   {
-    iterator i = find( variable );
+    iterator i = Find( variable );
     if( i == end() )
       throw;
     return i->second;
   }
   Variable& addVariable( std::string variable, Type& type, IOClass& ioclass )
   {
-    iterator i = find( variable );
+    iterator i = Find( variable );
     if( i != end() )
       throw;
     Variable* pV = new Variable( variable,type,ioclass );
-    insert( pair_t( variable,*pV ) );
+    push_back( pair_t( variable,*pV ) );
     return *pV;
   }
   Variable& addVariable( Variable& variable )
   {
-    iterator i = find( variable.name() );
+    iterator i = Find( variable.name() );
     if( i != end() )
       throw;
-    insert( pair_t( variable.name(),variable ) );
+    push_back( pair_t( variable.name(),variable ) );
     return variable;
+  }
+
+private:
+  vector_t::iterator Find( std::string variable )
+  {
+    for( auto i = begin(); i != end(); i++ )
+      if( i->first == variable )
+        return i;
+    return end();
   }
 
 protected:
