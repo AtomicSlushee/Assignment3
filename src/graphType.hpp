@@ -62,6 +62,7 @@ public:
   void createVertices(Statements& stmt, int& node, int& partition, vertex_t* from, vertex_t*& to)
   {
     bool firstStatement = true;
+    bool lastWasIf = false;
 
     // loop through all the given statements
     for( Statements::iterator i = stmt.begin(); i != stmt.end(); i++)
@@ -70,10 +71,12 @@ public:
       if( i->isAssignment() )
       {
         doAssignment( i, node, partition, from, to );
+        lastWasIf = false;
       }
       // if this statement is an if-statement
       else if( i->isIfStatement() )
       {
+        lastWasIf = true;
         // This part gets entertaining... need to substitute the if-statement for the NOP statement
         // inside the 'to' value, such that everything preceding remains linked, only now it will be
         // to the if-statement. Then, we modify 'to' so that it points to a new pseudo-endif
@@ -90,7 +93,7 @@ public:
         v->addLinkTo(*to);                            // establish dependency links
         to->addLinkFrom(*v);
                                                       // TODO: weight of conditional, if any
-        if( firstStatement)
+        if( firstStatement || lastWasIf )
           v->helper.partition = partition;            // partition number previously incremented to get here
         else
           v->helper.partition = ++partition;          // give it the next partition number (by itself)
@@ -126,6 +129,10 @@ public:
             graph.push_back(*to); // save the 'to' node in the graph
             from = to; // 'to' needs to become the new 'from', and a new 'to' created
             to = new vertex_t(*(new Statement()), 0);     // create the new end target for either the next partition or caller
+            // link the new from-to pair
+            from->addLinkTo(*to);
+            to->addLinkFrom(*from);
+            // next partition
             ++partition;
             // let the if-statment know where to go after the true branch
             v->helper.nextPart = partition;
@@ -162,6 +169,7 @@ public:
       }
       else if( i->isForLoop() )
       {
+        lastWasIf = false;
         // grab the initialize statement from the for loop...
         Statements::iterator ii = i->for_loop().getInitial().begin();
         // and add it to the graph as an assignment
