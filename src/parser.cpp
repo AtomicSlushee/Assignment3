@@ -2,6 +2,7 @@
 #include "if.h"
 #include "parser.h"
 #include "latency.h"
+#include "variable.h"
 #include <cstdio>
 #include <string>
 #include <map>
@@ -67,7 +68,10 @@ bool Parser::processMore( Variables& vars, Statements& stmts, Tokenizer& tokens,
     {
       // skip comments explicitly
       if( (token.length() > 1) && (token[0] == '/') && (token[1] == '/') )
+      {
+        tokens.kill();
         break; // go to next line
+      }
 
       // is it an IOClass declaration?
       if( ios.isIOClass( token ) )
