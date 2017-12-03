@@ -210,6 +210,10 @@ void Scheduler::ALAP( graphType& g, int latencyConstraint )
 
 void Scheduler::FDS(graphType& g, int latencyConstraint)
 {
+  // to make life easier, ignore the sink nodes
+  auto firstNode = std::next(g.getGraph().begin());
+  auto sinkNode = std::prev(g.getGraph().end());
+
   // Minimize resources under a latency constraint
   
   int Node_Time_Interval = 0;
@@ -221,9 +225,11 @@ void Scheduler::FDS(graphType& g, int latencyConstraint)
     v->get().helper.schedTime[graphType::FDS] = NOT_SCHEDULED;
   }
   
+#if 0 // not required; already done earlier in the 'process' method
   // Get the left and right edges for each node
   ASAP(g); // for left edge
   ALAP(g, latencyConstraint); // for right edge
+#endif
   
   // first, compute time frames for every node.
   // The time frame is just the earliest a node can be scheduled (ASAP)
@@ -231,7 +237,7 @@ void Scheduler::FDS(graphType& g, int latencyConstraint)
   
   // TODO: I don't think this needs to happen every time since the ALAP and ASAP don't change
   //       So I'm putting it outside the loop. Verify this is okay
-  for( auto v = g.getGraph().begin(); v != g.getGraph().end(); v++)
+  for( auto v = firstNode; v != sinkNode; v++)
   {
     // The width of the timeframe for every node is the ALAP - ASAP + 1
     v->get().leftEdge = v->get().helper.schedTime[graphType::ASAP];
@@ -239,7 +245,7 @@ void Scheduler::FDS(graphType& g, int latencyConstraint)
   }
   
   // for each node in the graph
-  for( auto v = g.getGraph().begin(); v != g.getGraph().end(); v++)
+  for( auto v = firstNode; v != sinkNode; v++)
   {
     //                   ALAP time               ASAP time
     Node_Time_Interval = v->get().rightEdge - v->get().leftEdge + 1;
@@ -292,7 +298,7 @@ void Scheduler::FDS(graphType& g, int latencyConstraint)
     NOP.push_back(0.0);
   }
   
-  for( auto v = g.getGraph().begin(); v != g.getGraph().end(); v++)
+  for( auto v = firstNode; v != sinkNode; v++)
   {
     // for each node sum the probabilities that the resource is being used in that time step
     for (int timestep = 0; timestep < latencyConstraint; timestep++)
@@ -325,7 +331,7 @@ void Scheduler::FDS(graphType& g, int latencyConstraint)
     }
   }
   // for each node in the graph take note of the associated resource list
-  for( auto v = g.getGraph().begin(); v != g.getGraph().end(); v++)
+  for( auto v = firstNode; v != sinkNode; v++)
   {
     if (v->get().getNode().get().getResource() == Statement::ADDER_SUB)
     {
@@ -377,7 +383,7 @@ void Scheduler::FDS(graphType& g, int latencyConstraint)
 
   
   // for each node, compute the self force, pred force, and succ force for each timestep
-  for( auto v = g.getGraph().begin(); v != g.getGraph().end(); v++)
+  for( auto v = firstNode; v != sinkNode; v++)
   {
     
     std::cout<< "\n\n-----------" << "Forces for node " << v->get().getNodeNumber() << "--------"  << std::endl;
@@ -412,8 +418,11 @@ void Scheduler::FDS(graphType& g, int latencyConstraint)
     v->get().helper.schedTime[graphType::FDS] = v->get().leftEdge + LeastForceIndex;
     
   }
-  
-  
+
+  // last step: clean up to help the state machine output code
+  g.getGraph().begin()->get().helper.schedTime[graphType::FDS] = 0;
+  sinkNode->get().helper.schedTime[graphType::FDS] = latencyConstraint + 1;
+
 }
 
 int Scheduler::buildPartTimeMap( partitionMap_t& m, graphType& g, graphType::ScheduleID s )
