@@ -4,10 +4,7 @@
 #include "operator.h"
 #include "vertex.hpp"
 #include <algorithm>
-// dElete me
-#include <iostream>
-#include "statement.h"
-#include <vector>
+
 
 Scheduler::Scheduler()
 : hlsmTools( Singleton< HLSM >::instance() )
@@ -55,6 +52,7 @@ bool Scheduler::process( Statements& input, graphType& output, int latencyConstr
   
   if( id == graphType::FDS )
   {
+    
     FDS( g,latencyConstraint );
     if( DEBUG_ENABLED )
       dumpScheduledGraph( g,graphType::FDS );
@@ -234,8 +232,6 @@ void Scheduler::FDS(graphType& g, int latencyConstraint)
   // The time frame is just the earliest a node can be scheduled (ASAP)
   // followed by the latest (ALAP)
   
-  // TODO: I don't think this needs to happen every time since the ALAP and ASAP don't change
-  //       So I'm putting it outside the loop. Verify this is okay
   for( auto v = firstNode; v != sinkNode; v++)
   {
     // The width of the timeframe for every node is the ALAP - ASAP + 1
@@ -248,9 +244,7 @@ void Scheduler::FDS(graphType& g, int latencyConstraint)
   {
     //                   ALAP time               ASAP time
     Node_Time_Interval = v->get().rightEdge - v->get().leftEdge + 1;
-    
-    std::cout << "Node " << v->get().getNodeNumber() << " leftEdge " << v->get().leftEdge << " rightEdge " << v->get().rightEdge << " Timewidth " << Node_Time_Interval << std::endl;
-    
+
     // compute the operations and type probabilities
     // Operational Probability is easy. just 1/timewidth for times in the range. 0 else.
     
@@ -259,7 +253,6 @@ void Scheduler::FDS(graphType& g, int latencyConstraint)
       if (timestep >= v->get().leftEdge && timestep <= v->get().rightEdge)
       {
         float prob = 1.0/Node_Time_Interval;
-        std::cout << "op prob " << prob <<  " recorded in cycle " << timestep << std::endl;
         v->get().opProb.push_back(prob);
       }
       else
@@ -269,6 +262,7 @@ void Scheduler::FDS(graphType& g, int latencyConstraint)
       
       
     }
+#if DEBUGPRINTS
     std::cout << "Operational Probabilities [cycle][probability]" << std::endl;
     
     int time = 1;
@@ -276,12 +270,12 @@ void Scheduler::FDS(graphType& g, int latencyConstraint)
     {
       std::cout << "[" << time++ << "][" << *t << "]" << std::endl;
     }
+#endif
   }
   // now compute the type distribution
   // Type Distribution is the sum of probabilities of the operations implemented by a specific
   // resource at any time step of interest
   
-  // TODO:  find a better way to keep track of typeDistributions
   std::vector<float> ad;
   std::vector<float> md;
   std::vector<float> dd;
@@ -354,6 +348,7 @@ void Scheduler::FDS(graphType& g, int latencyConstraint)
       v->get().ResourceTypeDistribution = NOP;
     }
   }
+#if DEBUGPRINTS
   std::cout << " ADDER/SUBTRACTOR USE Probabilities for each timestep" << std::endl;
   std::cout << " [cycle][Probability of use]" << std::endl;
   for ( timestep = 1; timestep <= latencyConstraint; timestep++)
@@ -379,13 +374,14 @@ void Scheduler::FDS(graphType& g, int latencyConstraint)
   {
     std::cout << " [" << timestep << "]" << "[" << ld[timestep -1] << "]" << std::endl;
   }
-
+#endif
   
   // for each node, compute the self force, pred force, and succ force for each timestep
   for( auto v = firstNode; v != sinkNode; v++)
   {
     
     std::cout<< "\n\n-----------" << "Forces for node " << v->get().getNodeNumber() << "--------"  << std::endl;
+    std::cout << "Node " << v->get().getNodeNumber() << " leftEdge " << v->get().leftEdge << " rightEdge " << v->get().rightEdge << " Timewidth " << Node_Time_Interval << std::endl;
     for (timestep = v->get().leftEdge; timestep <= v->get().rightEdge; timestep++)
     {
       float selfForce         = 0.0;
@@ -404,23 +400,14 @@ void Scheduler::FDS(graphType& g, int latencyConstraint)
       
       std::cout << " Predecessor Force " << PredecessorForce <<std::endl;
 
-      v->get().TotalForce.push_back(selfForce + SuccessorForce + PredecessorForce);
+      //;
+      v->get().TotalForce.insert(std::pair<float,int>(selfForce + SuccessorForce + PredecessorForce, timestep));
       
       std::cout << "The total force for node " << v->get().getNodeNumber() << " is " << selfForce + SuccessorForce + PredecessorForce  << " at cycle " << timestep  << "\n\r ------- \n\r"<< std::endl;
     }
-    //Now that we've done all the (applicable) timesteps pick the least force to schedule
-    int LeastForceIndex = 0;
-    float LeastForce = *v->get().TotalForce.begin();
-    for (int oops = v->get().leftEdge; oops <= v->get().rightEdge; oops++)
-    {
-      if (v->get().TotalForce[oops] < LeastForce)
-      {
-        LeastForce = v->get().TotalForce[oops]; // Pretty sure this is needed - Eric
-        LeastForceIndex = oops;
-      }
-    }
 
-    v->get().helper.schedTime[graphType::FDS] = v->get().leftEdge + LeastForceIndex;
+    
+    v->get().helper.schedTime[graphType::FDS] = v->get().TimeWithMinimumForce();
   }
 
   // last step: clean up to help the state machine output code

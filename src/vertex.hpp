@@ -3,6 +3,7 @@
 
 #include <functional>
 #include <vector>
+#include <map>
 template< class NODETYPE, class IOTYPE, class HELPER >
 class Vertex
 {
@@ -17,7 +18,7 @@ public:
   // need a list of probabilities
   
   std::vector<float> opProb;
-  std::vector<float> TotalForce;
+  std::map<float,int> TotalForce;
   std::vector<float> selfForce;
   
   float leftEdge  = 0.0;
@@ -35,14 +36,36 @@ public:
   {
   }
   
-  
+  int TimeWithMinimumForce()
+  {
+    float Current_Minimum_Cycle = 10000000;
+    float Current_Minimum       = 10000000;
+    float Current_Cycle         = 10000000;
+    float Current_Force         = 10000000;
+    std::cout << "Searching for mimimum force" << std::endl;
+    std::cout << "[Cycle][Force]" << std::endl;
+    for(auto it = TotalForce.cbegin(); it != TotalForce.cend(); ++it )
+    {
+      Current_Cycle = it->second;
+      Current_Force = it->first;
+      std::cout << "[" << Current_Cycle << "]" << "[" << Current_Force<< "]" << std::endl;
+      if (Current_Force < Current_Minimum) {
+        Current_Minimum       = Current_Force;
+        Current_Minimum_Cycle = Current_Cycle;
+      }
+      
+      
+    }
+    std::cout << Current_Minimum << " is the minimum force at cycle " << Current_Minimum_Cycle << std::endl;
+    return Current_Minimum_Cycle;
+  }
   float ComputeSelfForceForTimeSlot(int timeslot, float typeDist, bool occursThisSlot)
   {
     float selfForce = 0.0;
     float opProbabilty = 0.0;
     opProbabilty = opProb[timeslot-1];
     selfForce = typeDist*(occursThisSlot - opProbabilty);
-    std::cout << "\t\tCycle " << timeslot << " : " <<  typeDist << "*("<<occursThisSlot<<" - " << opProbabilty << ")" << std::endl;
+    //std::cout << "\t\tCycle " << timeslot << " : " <<  typeDist << "*("<<occursThisSlot<<" - " << opProbabilty << ")" << std::endl;
     return selfForce;
     
   }
@@ -51,11 +74,8 @@ public:
     float sf = 0.0;
     for (int k = leftEdge; k <= rightEdge; k++)
     {
-      //std::cout << "  Self Force at time " << k << " is " << v->get().ComputeSelfForceForTimeSlot(timestep, v->get().ResourceTypeDistribution[k-1], timestep==k) << std::endl;
       sf +=  ComputeSelfForceForTimeSlot(timestep, ResourceTypeDistribution[k-1], timestep==k);
     }
-    //std::cout << "Self force for node " << getNodeNumber() << " at cycle "<< timestep <<" is " << sf << std::endl;
-    this->selfForce.push_back(sf);// may be unnecessary now
     return sf;
   }
   
@@ -75,7 +95,7 @@ public:
         { // this is for each of the time frames which is what we want.
           dbTemp = p->get().ComputeSelfForceForTimeSlot(timestep, p->get().ResourceTypeDistribution[k-1], timestep!=k);
           PredecessorForce += dbTemp;
-          std::cout << "  Successor Force at time " << k << " from node " << p->get().getNodeNumber() << " is " << dbTemp << std::endl;
+          //std::cout << "  Successor Force at time " << k << " from node " << p->get().getNodeNumber() << " is " << dbTemp << std::endl;
           // Now we've done it for the first layer, we must go deeper
           if (!p->get().getLinksFrom().empty())
           {
@@ -91,13 +111,13 @@ public:
       }
       
     }
-    std::cout << "Predecessor Force from node " << getNodeNumber() << " is " << PredecessorForce <<std::endl;
+    //std::cout << "Predecessor Force from node " << getNodeNumber() << " is " << PredecessorForce <<std::endl;
 
     return PredecessorForce;
   }
   float ComputeSuccessorForceForTimeSlot(int timestep)
   {
-    std::cout << "Calculating Successor forces for node " << getNodeNumber() << " at cycle " << timestep <<std::endl;
+   // std::cout << "Calculating Successor forces for node " << getNodeNumber() << " at cycle " << timestep <<std::endl;
     float SuccessorForce = 0.0;
     float dbTemp = 0.0;
     for( auto p = this->getLinksTo().begin(); p != this->getLinksTo().end(); p++)
@@ -113,7 +133,7 @@ public:
           // this is for each of the time frames which is what we want.
           dbTemp = p->get().ComputeSelfForceForTimeSlot(timestep, p->get().ResourceTypeDistribution[k-1], timestep!=k);
           SuccessorForce += dbTemp;
-          std::cout << "  Successor Force at cycle " << k << " from node " << p->get().getNodeNumber() << " is " << dbTemp << std::endl;
+          //std::cout << "  Successor Force at cycle " << k << " from node " << p->get().getNodeNumber() << " is " << dbTemp << std::endl;
           // Now we've done it for the first layer, we must go deeper
           if (!p->get().getLinksTo().empty())
           {
