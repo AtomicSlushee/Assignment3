@@ -405,7 +405,7 @@ void Scheduler::FDS(graphType& g, int latencyConstraint)
       
       std::cout << " Predecessor Force " << PredecessorForce <<std::endl;
 
-      v->get().TotalForce.push_back(v->get().selfForce[timestep] + SuccessorForce + PredecessorForce);
+      v->get().TotalForce.push_back(selfForce + SuccessorForce + PredecessorForce);
       
       std::cout << "The total force for node " << v->get().getNodeNumber() << " is " << selfForce + SuccessorForce + PredecessorForce  << " at cycle " << timestep  << "\n\r ------- \n\r"<< std::endl;
     }
