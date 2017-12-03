@@ -395,13 +395,19 @@ void Scheduler::FDS(graphType& g, int latencyConstraint)
 
       selfForce = v->get().ComputeSelfForce(timestep);
       
+      std::cout << " Self Force " << selfForce <<std::endl;
+      
       SuccessorForce = v->get().ComputeSuccessorForceForTimeSlot(timestep);
       
+      std::cout << " Successor Force " << SuccessorForce <<std::endl;
+      
       PredecessorForce = v->get().ComputePredecessorForceForTimeSlot(timestep);
+      
+      std::cout << " Predecessor Force " << PredecessorForce <<std::endl;
 
       v->get().TotalForce.push_back(v->get().selfForce[timestep] + SuccessorForce + PredecessorForce);
       
-      std::cout << "The total force for node " << v->get().getNodeNumber() << " is " << v->get().selfForce[timestep - 1] + SuccessorForce + PredecessorForce  << " at cycle " << timestep << std::endl;
+      std::cout << "The total force for node " << v->get().getNodeNumber() << " is " << selfForce + SuccessorForce + PredecessorForce  << " at cycle " << timestep  << "\n\r ------- \n\r"<< std::endl;
     }
     //Now that we've done all the (applicable) timesteps pick the least force to schedule
     int LeastForceIndex = 0;
