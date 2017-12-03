@@ -380,7 +380,7 @@ void Scheduler::FDS(graphType& g, int latencyConstraint)
   for( auto v = g.getGraph().begin(); v != g.getGraph().end(); v++)
   {
     
-    std::cout<< "\n\n\n\n\n" << "Forces for node " << v->get().getNodeNumber()  << std::endl;
+    std::cout<< "\n\n-----------" << "Forces for node " << v->get().getNodeNumber() << "--------"  << std::endl;
     for (timestep = v->get().leftEdge; timestep <= v->get().rightEdge; timestep++)
     {
       float selfForce         = 0.0;
