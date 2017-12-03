@@ -62,6 +62,7 @@ public:
   float ComputePredecessorForceForTimeSlot(int timestep)
   {
     float PredecessorForce = 0.0;
+    float dbTemp = 0.0;
     for( auto p = this->getLinksFrom().begin(); p != this->getLinksFrom().end(); p++)
     {
       
@@ -72,13 +73,11 @@ public:
         
         for (int k = p->get().leftEdge; k <= p->get().rightEdge; k++)
         { // this is for each of the time frames which is what we want.
-          
-          
-          // todo this will probably not work if the timewidths are greater than 1 for the suc nodes
-          PredecessorForce += p->get().ComputeSelfForceForTimeSlot(timestep, p->get().ResourceTypeDistribution[k-1], timestep!=k);
-          std::cout << "  Successor Force at time " << k << " from node " << p->get().getNodeNumber() << " is " << PredecessorForce << std::endl;
+          dbTemp = p->get().ComputeSelfForceForTimeSlot(timestep, p->get().ResourceTypeDistribution[k-1], timestep!=k);
+          PredecessorForce += dbTemp;
+          std::cout << "  Successor Force at time " << k << " from node " << p->get().getNodeNumber() << " is " << dbTemp << std::endl;
           // Now we've done it for the first layer, we must go deeper
-          if (!p->get().getLinksTo().empty())
+          if (!p->get().getLinksFrom().empty())
           {
             PredecessorForce += p->get().ComputePredecessorForceForTimeSlot(k);
           }
