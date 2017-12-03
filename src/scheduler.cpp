@@ -140,14 +140,13 @@ void Scheduler::ALAP( graphType& g, int latencyConstraint )
     v->get().helper.schedTime[graphType::ALAP] = NOT_SCHEDULED;
     v->get().helper.color = graphType::BLACK;
   }
+  g.getGraph().rbegin()->get().helper.color = graphType::WHITE; // special math needed for the sink node
   
   // keep cycling until all nodes scheduled
   bool done = false;
   while( !done )
   {
     done = true; // if we get through the for loop without scheduling, we're done
-    
-    g.getGraph().rbegin()->get().helper.color = graphType::WHITE; // special math needed for the sink node
     
     for( auto v = g.getGraph().rbegin(); v != g.getGraph().rend(); v++ ) // using reverse iterators
     {
@@ -171,16 +170,16 @@ void Scheduler::ALAP( graphType& g, int latencyConstraint )
         bool allClear = true;             // will tell us if it is all clear
         
         // loop through all this node's successors
-        for( auto p = v->get().getLinksTo().begin(); p != v->get().getLinksTo().end(); p++ )
+        for( auto s = v->get().getLinksTo().begin(); s != v->get().getLinksTo().end(); s++ )
         {
           // grab the latency of the successors statement operation
           int latency;
-          if( p->get().helper.color == graphType::WHITE )
+          if( s->get().helper.color == graphType::WHITE )
             latency = 1; // special case to keep the sink node at a later time
           else
-            latency = p->get().getNode().get().getStatement()->scheduleLatency();
+            latency = v->get().getNode().get().getStatement()->scheduleLatency();
           // see if the successor has been scheduled
-          if( p->get().helper.schedTime[graphType::ALAP] <= NOT_SCHEDULED )
+          if( s->get().helper.schedTime[graphType::ALAP] <= NOT_SCHEDULED )
           {
             // nope, can't schedule this vertex
             allClear = false;
@@ -188,8 +187,8 @@ void Scheduler::ALAP( graphType& g, int latencyConstraint )
           }
           else
           {
-            // compute this node's start time based on successor schedule and latency
-            int nextStart = p->get().helper.schedTime[graphType::ALAP] - latency;
+            // compute this node's start time based on successor schedule and current node latency
+            int nextStart = s->get().helper.schedTime[graphType::ALAP] - latency;
             if( nextStart < minStart )
             {
               minStart = nextStart; // save the min
@@ -416,13 +415,12 @@ void Scheduler::FDS(graphType& g, int latencyConstraint)
     {
       if (v->get().TotalForce[oops] < LeastForce)
       {
-        // LeastForce = v->get().TotalForce[oops];// Eric's changes pre merge
+        LeastForce = v->get().TotalForce[oops]; // Pretty sure this is needed - Eric
         LeastForceIndex = oops;
       }
     }
-    // v->get().helper.schedTime[graphType::FDS] = LeastForceIndex; // Eric's changes pre-merge
+
     v->get().helper.schedTime[graphType::FDS] = v->get().leftEdge + LeastForceIndex;
-    
   }
 
   // last step: clean up to help the state machine output code
