@@ -36,10 +36,11 @@ bool Scheduler::process( Statements& input, graphType& output, int latencyConstr
     partitionMap_t m;
     // build a map from which we'll get the number of ASAP states
     int maxTimeSlot = buildPartTimeMap( m, g, graphType::ASAP ) - 1;
-    if( maxTimeSlot > latencyConstraint )
+    if( maxTimeSlot > latencyConstraint+1 )
     {
-      std::cout << "WARNING: the given latency constraint of " << latencyConstraint << " is less than the ASAP schedule; compensating." << std::endl;
+      std::cout << "WARNING: the given latency constraint of " << latencyConstraint << " is less than the ASAP schedule;" << std::endl;
       latencyConstraint = maxTimeSlot-1;
+      std::cout << "         using " << latencyConstraint << " instead." << std::endl;
     }
   }
   
@@ -128,6 +129,9 @@ void Scheduler::ASAP( graphType& g )
     if( done )
       break; // we're done
   }
+
+  // set top NOP to 0, always
+  g.getGraph().begin()->get().helper.schedTime[graphType::ASAP] = 0;
 }
 
 void Scheduler::ALAP( graphType& g, int latencyConstraint )
@@ -136,9 +140,7 @@ void Scheduler::ALAP( graphType& g, int latencyConstraint )
   for( auto v = g.getGraph().begin(); v != g.getGraph().end(); v++ )
   {
     v->get().helper.schedTime[graphType::ALAP] = NOT_SCHEDULED;
-    v->get().helper.color = graphType::BLACK;
   }
-  g.getGraph().rbegin()->get().helper.color = graphType::WHITE; // special math needed for the sink node
   
   // keep cycling until all nodes scheduled
   bool done = false;
@@ -158,7 +160,7 @@ void Scheduler::ALAP( graphType& g, int latencyConstraint )
       
       // does this node have any successors?
       if( v->get().getLinksTo().empty() )
-      {
+      { // by definition, this is the bottom sink
         v->get().helper.schedTime[graphType::ALAP] = latencyConstraint + 1; // schedule at end
       }
       else
@@ -170,12 +172,9 @@ void Scheduler::ALAP( graphType& g, int latencyConstraint )
         // loop through all this node's successors
         for( auto s = v->get().getLinksTo().begin(); s != v->get().getLinksTo().end(); s++ )
         {
-          // grab the latency of the successors statement operation
+          // grab the latency of the successor's statement operation
           int latency;
-          if( s->get().helper.color == graphType::WHITE )
-            latency = 1; // special case to keep the sink node at a later time
-          else
-            latency = v->get().getNode().get().getStatement()->scheduleLatency();
+          latency = v->get().getNode().get().getStatement()->scheduleLatency();
           // see if the successor has been scheduled
           if( s->get().helper.schedTime[graphType::ALAP] <= NOT_SCHEDULED )
           {
@@ -203,6 +202,9 @@ void Scheduler::ALAP( graphType& g, int latencyConstraint )
       }
     }
   }
+
+  // set top NOP to 0, always
+  g.getGraph().begin()->get().helper.schedTime[graphType::ALAP] = 0;
 }
 
 void Scheduler::FDS(graphType& g, int latencyConstraint)
