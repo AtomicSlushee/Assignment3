@@ -85,7 +85,10 @@ public:
     float dbTemp = 0.0;
     for( auto p = this->getLinksFrom().begin(); p != this->getLinksFrom().end(); p++)
     {
-      
+      if (p->get().getNodeNumber() == 0)
+      {
+        continue;
+      }
       // this scheduled timeslot interfere's with a predecessor's timeslot
       // so calculate the successor force
       if (timestep >= p->get().leftEdge && timestep <= p->get().rightEdge)
@@ -105,24 +108,20 @@ public:
         
         
       }
-      else
-      {
-        // std::cout << "  Predecessor Force at time " << timestep << " from node " << p->get().getNodeNumber() << " is " << 0 << std::endl;
-      }
+
       
     }
-    //std::cout << "Predecessor Force from node " << getNodeNumber() << " is " << PredecessorForce <<std::endl;
-
     return PredecessorForce;
   }
   float ComputeSuccessorForceForTimeSlot(int timestep)
   {
-   // std::cout << "Calculating Successor forces for node " << getNodeNumber() << " at cycle " << timestep <<std::endl;
+   
     float SuccessorForce = 0.0;
     float dbTemp = 0.0;
     for( auto p = this->getLinksTo().begin(); p != this->getLinksTo().end(); p++)
     {
       
+
       // this scheduled timeslot interfere's with a successor's timeslot
       // so calculate the successor force
       if (timestep >= p->get().leftEdge && timestep <= p->get().rightEdge)
