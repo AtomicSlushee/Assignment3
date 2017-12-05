@@ -277,12 +277,6 @@ void Scheduler::FDS(graphType& g, int latencyConstraint)
   // now compute the type distribution
   // Type Distribution is the sum of probabilities of the operations implemented by a specific
   // resource at any time step of interest
-  
-  std::vector<float> ad;
-  std::vector<float> md;
-  std::vector<float> dd;
-  std::vector<float> ld;
-  std::vector<float> NOP;
   // set them all to 0.0 first
   for ( timestep = 0 ; timestep < latencyConstraint; timestep++)
   {
@@ -292,64 +286,9 @@ void Scheduler::FDS(graphType& g, int latencyConstraint)
     ld.push_back(0.0);
     NOP.push_back(0.0);
   }
+
+  updateTypeDistributions(g, latencyConstraint);
   
-  for( auto v = firstNode; v != sinkNode; v++)
-  {
-    // for each node sum the probabilities that the resource is being used in that time step
-    for (int timestep = 0; timestep < latencyConstraint; timestep++)
-    {
-      if (v->get().getNode().get().getResource() == Statement::ADDER_SUB)
-      {
-        std::vector<float>::iterator it = v->get().opProb.begin();
-        std::advance(it,timestep);
-        ad[timestep] += *it;
-      }
-      if (v->get().getNode().get().getResource() == Statement::MULTIPLIER)
-      {
-        std::vector<float>::iterator it = v->get().opProb.begin();
-        std::advance(it,timestep);
-        md[timestep] += *it;
-      }
-      if (v->get().getNode().get().getResource() == Statement::DIV_MOD)
-      {
-        std::vector<float>::iterator it = v->get().opProb.begin();
-        std::advance(it,timestep);
-        dd[timestep] += *it;
-      }
-      if (v->get().getNode().get().getResource() == Statement::LOGICAL)
-      {
-        std::vector<float>::iterator it = v->get().opProb.begin();
-        std::advance(it,timestep);
-        ld[timestep] += *it;
-      }
-      
-    }
-  }
-  // for each node in the graph take note of the associated resource list
-  for( auto v = firstNode; v != sinkNode; v++)
-  {
-    if (v->get().getNode().get().getResource() == Statement::ADDER_SUB)
-    {
-      v->get().ResourceTypeDistribution = ad;
-    }
-    else if (v->get().getNode().get().getResource() == Statement::MULTIPLIER)
-    {
-      v->get().ResourceTypeDistribution = md;
-    }
-    else if (v->get().getNode().get().getResource() == Statement::DIV_MOD)
-    {
-      v->get().ResourceTypeDistribution = dd;
-    }
-    else if (v->get().getNode().get().getResource() == Statement::LOGICAL)
-    {
-      v->get().ResourceTypeDistribution = ld;
-    }
-    else
-    {
-      // NOP
-      v->get().ResourceTypeDistribution = NOP;
-    }
-  }
 #if DEBUGPRINTS
   std::cout << " ADDER/SUBTRACTOR USE Probabilities for each timestep" << std::endl;
   std::cout << " [cycle][Probability of use]" << std::endl;
@@ -409,14 +348,85 @@ void Scheduler::FDS(graphType& g, int latencyConstraint)
     }
 
     
-    v->get().helper.schedTime[graphType::FDS] = v->get().TimeWithMinimumForce(latencyConstraint);
-  
+    v->get().helper.schedTime[graphType::FDS] = v->get().TimeWithMinimumForce();
+
+#ifdef EHL
+    updateTypeDistributions(g, latencyConstraint);
+#endif
   }
 
   // last step: clean up to help the state machine output code
   g.getGraph().begin()->get().helper.schedTime[graphType::FDS] = 0;
   sinkNode->get().helper.schedTime[graphType::FDS] = latencyConstraint + 1;
 
+}
+
+void Scheduler::updateTypeDistributions(graphType& g, int latencyConstraint)
+{
+  // to make life easier, ignore the sink nodes
+  auto firstNode = std::next(g.getGraph().begin());
+  auto sinkNode = std::prev(g.getGraph().end());
+
+  // now compute the type distribution
+  // Type Distribution is the sum of probabilities of the operations implemented by a specific
+  // resource at any time step of interest
+  for( auto v = firstNode; v != sinkNode; v++)
+  {
+      // for each node sum the probabilities that the resource is being used in that time step
+      for (int timestep = 0; timestep < latencyConstraint; timestep++)
+      {
+          if (v->get().getNode().get().getResource() == Statement::ADDER_SUB)
+          {
+            std::vector<float>::iterator it = v->get().opProb.begin();
+            std::advance(it,timestep);
+            ad[timestep] += *it;
+          }
+          if (v->get().getNode().get().getResource() == Statement::MULTIPLIER)
+          {
+            std::vector<float>::iterator it = v->get().opProb.begin();
+            std::advance(it,timestep);
+            md[timestep] += *it;
+          }
+          if (v->get().getNode().get().getResource() == Statement::DIV_MOD)
+          {
+            std::vector<float>::iterator it = v->get().opProb.begin();
+            std::advance(it,timestep);
+            dd[timestep] += *it;
+          }
+          if (v->get().getNode().get().getResource() == Statement::LOGICAL)
+          {
+            std::vector<float>::iterator it = v->get().opProb.begin();
+            std::advance(it,timestep);
+            ld[timestep] += *it;
+          }
+
+      }
+  }
+  // for each node in the graph take note of the associated resource list
+  for( auto v = firstNode; v != sinkNode; v++)
+  {
+      if (v->get().getNode().get().getResource() == Statement::ADDER_SUB)
+      {
+        v->get().ResourceTypeDistribution = ad;
+      }
+      else if (v->get().getNode().get().getResource() == Statement::MULTIPLIER)
+      {
+        v->get().ResourceTypeDistribution = md;
+      }
+      else if (v->get().getNode().get().getResource() == Statement::DIV_MOD)
+      {
+        v->get().ResourceTypeDistribution = dd;
+      }
+      else if (v->get().getNode().get().getResource() == Statement::LOGICAL)
+      {
+        v->get().ResourceTypeDistribution = ld;
+      }
+      else
+      {
+          // NOP
+          v->get().ResourceTypeDistribution = NOP;
+      }
+  }
 }
 
 int Scheduler::buildPartTimeMap( partitionMap_t& m, graphType& g, graphType::ScheduleID s )

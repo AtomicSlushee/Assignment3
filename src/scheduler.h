@@ -30,9 +30,18 @@ public:
 
   int buildPartTimeMap(partitionMap_t& m, graphType& g, graphType::ScheduleID s);
   void dumpScheduledGraph(graphType& g, graphType::ScheduleID s);
+  void updateTypeDistributions(graphType& g, int latencyConstraint);
 
 private:
+
+  std::vector<float> ad;
+  std::vector<float> md;
+  std::vector<float> dd;
+  std::vector<float> ld;
+  std::vector<float> NOP;
+
   HLSM& hlsmTools;
+
 };
 
 #endif//__scheduler_h__
