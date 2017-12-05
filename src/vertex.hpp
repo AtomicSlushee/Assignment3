@@ -36,7 +36,7 @@ public:
   {
   }
   
-  int TimeWithMinimumForce()
+  int TimeWithMinimumForce(int latencyConstraint)
   {
     float Current_Minimum_Cycle = 10000000;
     float Current_Minimum       = 10000000;
@@ -44,6 +44,7 @@ public:
     float Current_Force         = 10000000;
     std::cout << "Searching for mimimum force" << std::endl;
     std::cout << "[Cycle][Force]" << std::endl;
+    
     for(auto it = TotalForce.cbegin(); it != TotalForce.cend(); ++it )
     {
       Current_Cycle = it->second;
@@ -57,6 +58,24 @@ public:
       
     }
     std::cout << Current_Minimum << " is the minimum force at cycle " << Current_Minimum_Cycle << std::endl;
+    
+    leftEdge = Current_Minimum_Cycle;
+    rightEdge = Current_Minimum_Cycle;
+    
+    for (int cycle = 0; cycle <= latencyConstraint; cycle++)
+    {
+      if (cycle == Current_Minimum_Cycle)
+      {
+        opProb[cycle] = 1;
+      }
+      else
+      {
+        opProb[cycle] = 0;
+      }
+    }
+
+    
+    
     return Current_Minimum_Cycle;
   }
   float ComputeSelfForceForTimeSlot(int timeslot, float typeDist, bool occursThisSlot)

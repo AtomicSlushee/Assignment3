@@ -375,20 +375,7 @@ void Scheduler::FDS(graphType& g, int latencyConstraint)
     std::cout << " [" << timestep << "]" << "[" << ld[timestep -1] << "]" << std::endl;
   }
 #endif
-  for( auto v = firstNode; v != sinkNode; v++)
-  {
-    std::cout << " NODE " << v->get().getNodeNumber() << " depends on " << std::endl;
-    for( auto p = v->get().getLinksFrom().begin(); p != v->get().getLinksFrom().end(); p++)
-    {
-      std::cout << "\t NODE" << p->get().getNodeNumber() << std::endl;
-    }
-    std::cout << "  and is depended on by " << std::endl;
-    for( auto p = v->get().getLinksTo().begin(); p != v->get().getLinksTo().end(); p++)
-    {
-      std::cout << "\t NODE" << p->get().getNodeNumber() << std::endl;
-    }
-    
-  }
+
   // for each node, compute the self force, pred force, and succ force for each timestep
   for( auto v = firstNode; v != sinkNode; v++)
   {
@@ -413,14 +400,15 @@ void Scheduler::FDS(graphType& g, int latencyConstraint)
       
       std::cout << " Predecessor Force " << PredecessorForce <<std::endl;
 
-      //;
+      
       v->get().TotalForce.insert(std::pair<float,int>(selfForce + SuccessorForce + PredecessorForce, timestep));
       
       std::cout << "The total force for node " << v->get().getNodeNumber() << " is " << selfForce + SuccessorForce + PredecessorForce  << " at cycle " << timestep  << "\n\r ------- \n\r"<< std::endl;
     }
 
     
-    v->get().helper.schedTime[graphType::FDS] = v->get().TimeWithMinimumForce();
+    v->get().helper.schedTime[graphType::FDS] = v->get().TimeWithMinimumForce(latencyConstraint);
+  
   }
 
   // last step: clean up to help the state machine output code
