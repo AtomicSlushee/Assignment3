@@ -132,9 +132,8 @@ bool Verilog::HLSM( std::ofstream& out, std::string name, Variables& vars, Varia
           {
             if( s->getNode().get().isIfStatement())
             {
-              out << Indent( THEN_IN ) << s->getNode().get().C_format(true) << std::endl;
-              out << Indent( THEN_OUT) << Variables::nameState() << " <= " << (++lastState) << ";" << std::endl;
-              out << Indent( THEN_OUT) << Variables::nameState() << " <= " << m[s->helper.nextPart].begin()->first << ";" << std::endl;
+              out << Indent() << s->getNode().get().C_format(true) << " " << Variables::nameState() << " <= " << (++lastState) << ";" << std::endl;
+              out << Indent( THEN_OUT ) << "else " << Variables::nameState() << " <= " << m[s->helper.nextPart].begin()->first << ";" << std::endl;
               out << Indent() << "end" << std::endl;
               out << Indent( THEN_IN ) << lastState << ": begin" << std::endl;
             }
