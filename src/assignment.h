@@ -196,7 +196,7 @@ private:
     if( var.width() < width )
     {
       std::ostringstream tmp;
-      if( var.isSigned() )
+      if( var.isSigned() && var.width() > 1 )
       {
         // sign extend
         tmp << "{{" << (width - var.width()) << "{" << var.name() << "[" << var.width() - 1 << "]" << "}}," << result
