@@ -6,10 +6,12 @@ Group Members:
 ECE574A
 
 Assignment #3
-todo -- Brief Description
+Converts a C-like behavioral description into a
+scheduled high-level statement machine implemented in Verilog.
+Usage: [input C-like file] [a latency constraint specified in cycles] [output Verilog file]
 
 Member Contributions
-* Andrew -- todo
-* Eric -- todo
-* Ken -- todo
+* Andrew -- FDS and all buggy/hard-to-read code
+* Eric -- FDS, testing, and good code
+* Ken -- Verilog-to-HLSM, Program Flow and architecture
 
