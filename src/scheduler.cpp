@@ -5,6 +5,8 @@
 #include "vertex.hpp"
 #include <algorithm>
 
+#define DEBUGPRINTS 1
+
 
 Scheduler::Scheduler()
 : hlsmTools( Singleton< HLSM >::instance() )
@@ -252,7 +254,7 @@ void Scheduler::FDS(graphType& g, int latencyConstraint)
     
     for (timestep = 1; timestep <= latencyConstraint; timestep++)
     {
-      if (timestep >= v->get().leftEdge && timestep <= v->get().rightEdge)
+      if (timestep > v->get().leftEdge && timestep <= v->get().rightEdge)
       {
         float prob = 1.0/Node_Time_Interval;
         v->get().opProb.push_back(prob);
@@ -273,18 +275,6 @@ void Scheduler::FDS(graphType& g, int latencyConstraint)
       std::cout << "[" << time++ << "][" << *t << "]" << std::endl;
     }
 #endif
-  }
-  // now compute the type distribution
-  // Type Distribution is the sum of probabilities of the operations implemented by a specific
-  // resource at any time step of interest
-  // set them all to 0.0 first
-  for ( timestep = 0 ; timestep < latencyConstraint; timestep++)
-  {
-    ad.push_back(0.0);
-    md.push_back(0.0);
-    dd.push_back(0.0);
-    ld.push_back(0.0);
-    NOP.push_back(0.0);
   }
 
   updateTypeDistributions(g, latencyConstraint);
@@ -353,6 +343,7 @@ void Scheduler::FDS(graphType& g, int latencyConstraint)
 #ifdef EHL
     updateTypeDistributions(g, latencyConstraint);
 #endif
+
   }
 
   // last step: clean up to help the state machine output code
@@ -370,10 +361,26 @@ void Scheduler::updateTypeDistributions(graphType& g, int latencyConstraint)
   // now compute the type distribution
   // Type Distribution is the sum of probabilities of the operations implemented by a specific
   // resource at any time step of interest
+  // set them all to 0.0 first
+  ad.clear();
+  md.clear();
+  dd.clear();
+  ld.clear();
+  NOP.clear();
+  for ( int timestep = 0; timestep <= latencyConstraint; timestep++)
+  {
+    // initializing all timesteps to 0.0, including first NOP
+    ad.push_back(0.0);
+    md.push_back(0.0);
+    dd.push_back(0.0);
+    ld.push_back(0.0);
+    NOP.push_back(0.0);
+  }
+
   for( auto v = firstNode; v != sinkNode; v++)
   {
       // for each node sum the probabilities that the resource is being used in that time step
-      for (int timestep = 0; timestep < latencyConstraint; timestep++)
+      for (int timestep = 1; timestep <= latencyConstraint; timestep++)
       {
           if (v->get().getNode().get().getResource() == Statement::ADDER_SUB)
           {
