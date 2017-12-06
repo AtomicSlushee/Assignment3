@@ -251,10 +251,10 @@ void Scheduler::FDS(graphType& g, int latencyConstraint)
 
     // compute the operations and type probabilities
     // Operational Probability is easy. just 1/timewidth for times in the range. 0 else.
-    
+    v->get().opProb.push_back(0.0); // fill the unused zeroth spot
     for (timestep = 1; timestep <= latencyConstraint; timestep++)
     {
-      if (timestep > v->get().leftEdge && timestep <= v->get().rightEdge)
+      if (timestep >= v->get().leftEdge && timestep <= v->get().rightEdge)
       {
         float prob = 1.0/Node_Time_Interval;
         v->get().opProb.push_back(prob);
@@ -284,26 +284,26 @@ void Scheduler::FDS(graphType& g, int latencyConstraint)
   std::cout << " [cycle][Probability of use]" << std::endl;
   for ( timestep = 1; timestep <= latencyConstraint; timestep++)
   {
-    std::cout << " [" << timestep << "]" << "[" << ad[timestep -1] << "]" << std::endl;
+    std::cout << " [" << timestep << "]" << "[" << ad[timestep] << "]" << std::endl;
   }
   
   std::cout << " MULTIPLIER USE Probabilities for each timestep" << std::endl;
   std::cout << " [cycle][Probability of use]" << std::endl;
   for ( timestep = 1; timestep <= latencyConstraint; timestep++)
   {
-    std::cout << " [" << timestep << "]" << "[" << md[timestep -1] << "]" << std::endl;
+    std::cout << " [" << timestep << "]" << "[" << md[timestep] << "]" << std::endl;
   }
   std::cout << " DIVIDER/MOD USE Probabilities for each timestep" << std::endl;
   std::cout << " [cycle][Probability of use]" << std::endl;
   for ( timestep = 1; timestep <= latencyConstraint; timestep++)
   {
-    std::cout << " [" << timestep << "]" << "[" << dd[timestep -1] << "]" << std::endl;
+    std::cout << " [" << timestep << "]" << "[" << dd[timestep] << "]" << std::endl;
   }
   std::cout << " LOGICAL USE Probabilities for each timestep" << std::endl;
   std::cout << " [cycle][Probability of use]" << std::endl;
   for ( timestep = 1; timestep <= latencyConstraint; timestep++)
   {
-    std::cout << " [" << timestep << "]" << "[" << ld[timestep -1] << "]" << std::endl;
+    std::cout << " [" << timestep << "]" << "[" << ld[timestep] << "]" << std::endl;
   }
 #endif
 
