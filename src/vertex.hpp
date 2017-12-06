@@ -70,7 +70,7 @@ public:
   {
     float selfForce = 0.0;
     float opProbabilty = 0.0;
-    opProbabilty = opProb[timeslot-1];
+    opProbabilty = opProb[timeslot];
     selfForce = typeDist*(occursThisSlot - opProbabilty);
     std::cout << "\t\tCycle " << timeslot << " : " <<  typeDist << "*("<<occursThisSlot<<" - " << opProbabilty << ")   selfForce = " << selfForce << std::endl;
     return selfForce;
@@ -81,7 +81,7 @@ public:
     float sf = 0.0;
     for (int k = leftEdge; k <= rightEdge; k++)
     {
-      sf +=  ComputeSelfForceForTimeSlot(timestep, ResourceTypeDistribution[k-1], timestep==k);
+      sf +=  ComputeSelfForceForTimeSlot(timestep, ResourceTypeDistribution[k], timestep==k);
     }
     return sf;
   }
@@ -103,7 +103,7 @@ public:
         
         for (int k = p->get().leftEdge; k <= p->get().rightEdge; k++)
         { // this is for each of the time frames which is what we want.
-          dbTemp = p->get().ComputeSelfForceForTimeSlot(timestep, p->get().ResourceTypeDistribution[k-1], timestep!=k);
+          dbTemp = p->get().ComputeSelfForceForTimeSlot(timestep, p->get().ResourceTypeDistribution[k], timestep!=k);
           PredecessorForce += dbTemp;
           //std::cout << "  Successor Force at time " << k << " from node " << p->get().getNodeNumber() << " is " << dbTemp << std::endl;
           // Now we've done it for the first layer, we must go deeper
@@ -137,7 +137,7 @@ public:
         for (int k = p->get().leftEdge; k <= p->get().rightEdge; k++)
         {
           // this is for each of the time frames which is what we want.
-          dbTemp = p->get().ComputeSelfForceForTimeSlot(timestep, p->get().ResourceTypeDistribution[k-1], timestep!=k);
+          dbTemp = p->get().ComputeSelfForceForTimeSlot(timestep, p->get().ResourceTypeDistribution[k], timestep!=k);
           SuccessorForce += dbTemp;
           //std::cout << "  Successor Force at cycle " << k << " from node " << p->get().getNodeNumber() << " is " << dbTemp << std::endl;
           // Now we've done it for the first layer, we must go deeper
