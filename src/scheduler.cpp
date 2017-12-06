@@ -340,9 +340,20 @@ void Scheduler::FDS(graphType& g, int latencyConstraint)
     
     v->get().helper.schedTime[graphType::FDS] = v->get().TimeWithMinimumForce();
 
-#ifdef EHL
+    for (timestep = v->get().leftEdge; timestep <= v->get().rightEdge; timestep++)
+    {
+      if(timestep >= v->get().helper.schedTime[graphType::FDS] && timestep <= v->get().helper.schedTime[graphType::FDS]+v->get().helper.weight[graphType::SCHEDULING])
+      {
+          v->get().opProb[timestep] = 1.0;
+      }
+      else
+      {
+          v->get().opProb[timestep] = 0.0;
+      }
+
+    }
+
     updateTypeDistributions(g, latencyConstraint);
-#endif
 
   }
 
