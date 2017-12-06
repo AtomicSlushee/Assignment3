@@ -47,7 +47,7 @@ int main( int argc, char* argv[] )
             {
               if( verilog.HLSM( outFile, "", moduleVars, modelVars, schedule, sid ))
               {
-                DEBUGOUT( "converted %s\nto %s\nwith latency %g and\nscheduling algorithm %s\n",argv[1],argv[3],latency,schedule.nameScheduleID(sid).c_str() );
+                printf( "converted %s\nto %s\nwith latency %g and\nscheduling algorithm %s\n",argv[1],argv[3],latency,schedule.nameScheduleID(sid).c_str() );
               }
               else
               {

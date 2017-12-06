@@ -3,7 +3,7 @@
 
 #include <iostream>
 
-#define DEBUG_ENABLED 1
+#define DEBUG_ENABLED 0
 
 #if DEBUG_ENABLED
 // enable debug output

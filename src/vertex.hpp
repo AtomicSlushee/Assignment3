@@ -1,6 +1,7 @@
 #ifndef vertex_hpp
 #define vertex_hpp
 
+#include "hlsyn.h"
 #include <functional>
 #include <vector>
 #include <map>
@@ -42,19 +43,19 @@ public:
     float Current_Minimum       = 10000000;
     float Current_Cycle         = 10000000;
     float Current_Force         = 10000000;
-    std::cout << "Searching for mimimum force" << std::endl;
-    std::cout << "[Cycle][Force]" << std::endl;
+    DEBUGCOUT << "Searching for mimimum force" << std::endl;
+    DEBUGCOUT << "[Cycle][Force]" << std::endl;
     for(auto it = TotalForce.cbegin(); it != TotalForce.cend(); ++it )
     {
       Current_Cycle = it->second;
       Current_Force = it->first;
-      std::cout << "[" << Current_Cycle << "]" << "[" << Current_Force<< "]" << std::endl;
+      DEBUGCOUT << "[" << Current_Cycle << "]" << "[" << Current_Force<< "]" << std::endl;
       if (Current_Force < Current_Minimum) {
         Current_Minimum       = Current_Force;
         Current_Minimum_Cycle = Current_Cycle;
       }
     }
-    std::cout << Current_Minimum << " is the minimum force at cycle " << Current_Minimum_Cycle << std::endl;
+    DEBUGCOUT << Current_Minimum << " is the minimum force at cycle " << Current_Minimum_Cycle << std::endl;
 
     return Current_Minimum_Cycle;
   }
@@ -64,7 +65,7 @@ public:
     float opProbabilty = 0.0;
     opProbabilty = opProb[timeslot];
     selfForce = typeDist*(occursThisSlot - opProbabilty);
-    std::cout << "\t\tCycle " << timeslot << " : " <<  typeDist << "*("<<occursThisSlot<<" - " << opProbabilty << ")   selfForce = " << selfForce << std::endl;
+    DEBUGCOUT << "\t\tCycle " << timeslot << " : " <<  typeDist << "*("<<occursThisSlot<<" - " << opProbabilty << ")   selfForce = " << selfForce << std::endl;
     return selfForce;
     
   }
@@ -97,7 +98,7 @@ public:
         { // this is for each of the time frames which is what we want.
           dbTemp = p->get().ComputeSelfForceForTimeSlot(timestep, p->get().ResourceTypeDistribution[k], timestep!=k);
           PredecessorForce += dbTemp;
-          //std::cout << "  Successor Force at time " << k << " from node " << p->get().getNodeNumber() << " is " << dbTemp << std::endl;
+          //DEBUGCOUT << "  Successor Force at time " << k << " from node " << p->get().getNodeNumber() << " is " << dbTemp << std::endl;
           // Now we've done it for the first layer, we must go deeper
           if (!p->get().getLinksFrom().empty())
           {
@@ -131,7 +132,7 @@ public:
           // this is for each of the time frames which is what we want.
           dbTemp = p->get().ComputeSelfForceForTimeSlot(timestep, p->get().ResourceTypeDistribution[k], timestep!=k);
           SuccessorForce += dbTemp;
-          //std::cout << "  Successor Force at cycle " << k << " from node " << p->get().getNodeNumber() << " is " << dbTemp << std::endl;
+          //DEBUGCOUT << "  Successor Force at cycle " << k << " from node " << p->get().getNodeNumber() << " is " << dbTemp << std::endl;
           // Now we've done it for the first layer, we must go deeper
           if (!p->get().getLinksTo().empty())
           {

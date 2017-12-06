@@ -5,7 +5,7 @@
 #include "vertex.hpp"
 #include <algorithm>
 
-#define DEBUGPRINTS 1
+#define DEBUGPRINTS 0
 
 
 Scheduler::Scheduler()
@@ -311,8 +311,8 @@ void Scheduler::FDS(graphType& g, int latencyConstraint)
   for( auto v = firstNode; v != sinkNode; v++)
   {
     
-    std::cout<< "\n\n-----------" << "Forces for node " << v->get().getNodeNumber() << "--------"  << std::endl;
-    std::cout << "Node " << v->get().getNodeNumber() << " leftEdge " << v->get().leftEdge << " rightEdge " << v->get().rightEdge << " Timewidth " << Node_Time_Interval << std::endl;
+    DEBUGCOUT<< "\n\n-----------" << "Forces for node " << v->get().getNodeNumber() << "--------"  << std::endl;
+    DEBUGCOUT << "Node " << v->get().getNodeNumber() << " leftEdge " << v->get().leftEdge << " rightEdge " << v->get().rightEdge << " Timewidth " << Node_Time_Interval << std::endl;
     for (timestep = v->get().leftEdge; timestep <= v->get().rightEdge; timestep++)
     {
       float selfForce         = 0.0;
@@ -321,20 +321,20 @@ void Scheduler::FDS(graphType& g, int latencyConstraint)
 
       selfForce = v->get().ComputeSelfForce(timestep);
       
-      std::cout << " Self Force " << selfForce <<std::endl;
+      DEBUGCOUT << " Self Force " << selfForce <<std::endl;
       
       SuccessorForce = v->get().ComputeSuccessorForceForTimeSlot(timestep);
       
-      std::cout << " Successor Force " << SuccessorForce <<std::endl;
+      DEBUGCOUT << " Successor Force " << SuccessorForce <<std::endl;
       
       PredecessorForce = v->get().ComputePredecessorForceForTimeSlot(timestep);
       
-      std::cout << " Predecessor Force " << PredecessorForce <<std::endl;
+      DEBUGCOUT << " Predecessor Force " << PredecessorForce <<std::endl;
 
       
       v->get().TotalForce.insert(std::pair<float,int>(selfForce + SuccessorForce + PredecessorForce, timestep));
       
-      std::cout << "The total force for node " << v->get().getNodeNumber() << " is " << selfForce + SuccessorForce + PredecessorForce  << " at cycle " << timestep  << "\n\r ------- \n\r"<< std::endl;
+      DEBUGCOUT << "The total force for node " << v->get().getNodeNumber() << " is " << selfForce + SuccessorForce + PredecessorForce  << " at cycle " << timestep  << "\n\r ------- \n\r"<< std::endl;
     }
 
     
